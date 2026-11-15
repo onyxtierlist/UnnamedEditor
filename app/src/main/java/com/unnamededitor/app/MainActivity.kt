@@ -43,6 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
 import androidx.compose.ui.viewinterop.AndroidView
 
 private val ink = Color(0xFF080B13)
@@ -74,6 +75,8 @@ private fun UnnamedEditor() {
     var videoUri by remember { mutableStateOf<Uri?>(null) }
     var videoName by remember { mutableStateOf("No media imported") }
     var playing by remember { mutableStateOf(false) }
+    var playheadMs by remember { mutableLongStateOf(0L) }
+    var durationMs by remember { mutableLongStateOf(0L) }
     var selectedClip by remember { mutableIntStateOf(1) }
     var nextId by remember { mutableIntStateOf(5) }
     var notice by remember { mutableStateOf("Ready to create") }
@@ -124,13 +127,16 @@ private fun UnnamedEditor() {
                         onEffects = { page = "Effects" }
                     )
                     "Editor" -> EditorScreen(
-                        projectName, videoUri, videoName, playing, clips, selectedClip, speed, notice,
+                        projectName, videoUri, videoName, playing, clips, selectedClip, speed, notice, playheadMs, durationMs,
                         onBack = { page = "Home" },
                         onImport = { picker.launch("video/*") },
                         onPlay = {
                             playing = !playing
                             notice = if (playing) "Playback paused" else "Playback started"
                         },
+                        onPosition = { playheadMs = it },
+                        onDuration = { durationMs = it },
+                        onSeek = { playheadMs = it },
                         onSelectClip = { selectedClip = it },
                         onSplit = {
                             val chosen = clips.firstOrNull { it.id == selectedClip }
@@ -271,8 +277,10 @@ private fun QuickAction(title: String, icon: String, modifier: Modifier, onClick
 @Composable
 private fun EditorScreen(
     project: String, videoUri: Uri?, videoName: String, playing: Boolean, clips: List<ClipItem>,
-    selectedClip: Int, speed: String, notice: String, onBack: () -> Unit, onImport: () -> Unit,
-    onPlay: () -> Unit, onSelectClip: (Int) -> Unit, onSplit: () -> Unit, onDelete: () -> Unit,
+    selectedClip: Int, speed: String, notice: String, playheadMs: Long, durationMs: Long,
+    onBack: () -> Unit, onImport: () -> Unit,
+    onPlay: () -> Unit, onPosition: (Long) -> Unit, onDuration: (Long) -> Unit, onSeek: (Long) -> Unit,
+    onSelectClip: (Int) -> Unit, onSplit: () -> Unit, onDelete: () -> Unit,
     onSpeed: () -> Unit, onAddLayer: () -> Unit, onEffects: () -> Unit, onNodes: () -> Unit, onExport: () -> Unit
 ) {
     val videoView = remember { mutableStateOf<VideoView?>(null) }
@@ -280,6 +288,12 @@ private fun EditorScreen(
         val view = videoView.value
         if (view != null && videoUri != null) {
             if (playing) view.start() else view.pause()
+        }
+    }
+    LaunchedEffect(playing, videoUri) {
+        while (playing && videoUri != null) {
+            videoView.value?.let { onPosition(it.currentPosition.toLong()) }
+            delay(200)
         }
     }
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
@@ -304,6 +318,7 @@ private fun EditorScreen(
                             mp.isLooping = true
                             val rate = speed.removeSuffix("×").toFloatOrNull() ?: 1f
                             mp.setPlaybackParams(android.media.PlaybackParams().setSpeed(rate))
+                            onDuration(mp.duration.toLong())
                             if (playing) start()
                         }
                         videoView.value = this
@@ -327,11 +342,14 @@ private fun EditorScreen(
         }
         Spacer(Modifier.height(12.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("00:00:00", color = textMain, fontSize = 12.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
-            Box(Modifier.size(44.dp).clip(CircleShape).background(violet).clickable { onPlay() }, contentAlignment = Alignment.Center) { Text(if (playing) "Ⅱ" else "▶", color = Color.White, fontSize = 19.sp) }
-            Text("00:15:00", color = textDim, fontSize = 12.sp, modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.End)
+            Text(formatTime(playheadMs), color = textMain, fontSize = 12.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+            Surface(onClick = onPlay, modifier = Modifier.size(46.dp), shape = CircleShape, color = violet) { Box(contentAlignment = Alignment.Center) { Icon(if (playing) Icons.Outlined.Pause else Icons.Outlined.PlayArrow, contentDescription = if (playing) "Pause" else "Play", tint = Color.White) } }
+            Text(formatTime(durationMs), color = textDim, fontSize = 12.sp, modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.End)
         }
-        Spacer(Modifier.height(15.dp))
+        if (durationMs > 0L) {
+            Slider(value = playheadMs.coerceIn(0L, durationMs).toFloat(), onValueChange = { onSeek(it.toLong()); videoView.value?.seekTo(it.toInt()) }, valueRange = 0f..durationMs.toFloat(), colors = SliderDefaults.colors(thumbColor = cyan, activeTrackColor = violet, inactiveTrackColor = line), modifier = Modifier.fillMaxWidth().height(24.dp))
+        }
+        Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("TIMELINE", color = textMain, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, modifier = Modifier.weight(1f))
             Text(notice, color = cyan, fontSize = 9.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -514,6 +532,12 @@ private fun ToolPill(label: String, onClick: () -> Unit, highlighted: Boolean = 
     Surface(onClick = onClick, shape = RoundedCornerShape(12.dp), color = if (highlighted) violet else surface2, border = if (highlighted) null else androidx.compose.foundation.BorderStroke(1.dp, line)) {
         Text(label, color = textMain, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 13.dp, vertical = 10.dp))
     }
+}
+
+@Composable
+private fun formatTime(ms: Long): String {
+    val total = (ms.coerceAtLeast(0L) / 1000L).toInt()
+    return "%02d:%02d".format(total / 60, total % 60)
 }
 
 @Composable
