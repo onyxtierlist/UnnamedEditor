@@ -261,7 +261,7 @@ private fun HomeScreen(projectName: String, onNew: () -> Unit, onOpen: () -> Uni
             Text("›", color = violet, fontSize = 28.sp)
         }
         Spacer(Modifier.height(26.dp))
-        Text("A timeline for speed. A node graph for control.", color = textDim, fontSize = 11.sp)
+        Text("Every frame, your way.", color = textDim, fontSize = 11.sp)
         Spacer(Modifier.height(24.dp))
     }
 }
@@ -379,25 +379,29 @@ private fun EditorScreen(
             if (clips.isEmpty()) Text("Add a layer to begin building your timeline.", color = textDim, fontSize = 10.sp, modifier = Modifier.padding(10.dp))
         }
         Spacer(Modifier.height(8.dp))
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            EditorTool("Split", Icons.Outlined.ContentCut, onSplit)
-            EditorTool("Delete", Icons.Outlined.DeleteOutline, onDelete)
-            EditorTool("Speed " + speed, Icons.Outlined.Speed, onSpeed)
-            EditorTool("Effects", Icons.Outlined.AutoFixHigh, onEffects)
-            EditorTool("Nodes", Icons.Outlined.AccountTree, onNodes)
-            EditorTool("Import", Icons.Outlined.FileUpload, onImport)
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                EditorTool("Split", Icons.Outlined.ContentCut, Modifier.weight(1f), onSplit)
+                EditorTool("Remove", Icons.Outlined.DeleteOutline, Modifier.weight(1f), onDelete)
+                EditorTool("Speed " + speed, Icons.Outlined.Speed, Modifier.weight(1f), onSpeed)
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                EditorTool("Looks", Icons.Outlined.AutoFixHigh, Modifier.weight(1f), onEffects)
+                EditorTool("Graph", Icons.Outlined.AccountTree, Modifier.weight(1f), onNodes)
+                EditorTool("Add media", Icons.Outlined.FileUpload, Modifier.weight(1f), onImport)
+            }
         }
         Spacer(Modifier.height(12.dp))
     }
 }
 
 @Composable
-private fun EditorTool(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
-    Surface(onClick = onClick, modifier = Modifier.widthIn(min = 68.dp), shape = RoundedCornerShape(14.dp), color = surface2, border = androidx.compose.foundation.BorderStroke(1.dp, line)) {
-        Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(icon, contentDescription = label, tint = violet, modifier = Modifier.size(20.dp))
-            Spacer(Modifier.height(5.dp))
-            Text(label, color = textMain, fontSize = 9.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+private fun EditorTool(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Surface(onClick = onClick, modifier = modifier.height(58.dp), shape = RoundedCornerShape(17.dp), color = surface, border = androidx.compose.foundation.BorderStroke(1.dp, line)) {
+        Row(Modifier.fillMaxSize().padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+            Icon(icon, contentDescription = label, tint = cyan, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(label, color = textMain, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
