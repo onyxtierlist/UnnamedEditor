@@ -1,6 +1,6 @@
 # UnnamedEditor — Android Prototype 0.1
 
-An independent Android-first hybrid video editor concept: a CapCut-inspired timeline UI combined with a Node Video-inspired node workspace.
+An independent Android-first video editor with a flexible timeline, visual effects workspace, and node-based compositing tools.
 
 ## Included in this prototype
 - Home screen with new project and recent-project entry points
