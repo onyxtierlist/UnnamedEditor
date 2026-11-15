@@ -273,9 +273,14 @@ private fun HomeScreen(projectName: String, onNew: () -> Unit, onOpen: () -> Uni
 
 @Composable
 private fun QuickAction(title: String, icon: String, modifier: Modifier, onClick: () -> Unit) {
-    Row(modifier.height(62.dp).clip(RoundedCornerShape(16.dp)).background(glassGradient).border(1.dp, line, RoundedCornerShape(16.dp)).clickable { onClick() }.padding(horizontal = 13.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(icon, color = violet, fontSize = 23.sp)
-        Text(title, color = textMain, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 9.dp))
+    Column(modifier.height(92.dp).clip(RoundedCornerShape(20.dp)).background(glassGradient).border(1.dp, line, RoundedCornerShape(20.dp)).clickable { onClick() }.padding(13.dp), verticalArrangement = Arrangement.SpaceBetween) {
+        Box(Modifier.size(34.dp).clip(RoundedCornerShape(12.dp)).background(violet.copy(alpha = .18f)), contentAlignment = Alignment.Center) {
+            Text(icon, color = cyan, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(title, color = textMain, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            Text("↗", color = cyan, fontSize = 15.sp)
+        }
     }
 }
 
@@ -388,12 +393,12 @@ private fun EditorScreen(
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 EditorTool("Split", Icons.Outlined.ContentCut, Modifier.weight(1f), onSplit)
                 EditorTool("Remove", Icons.Outlined.DeleteOutline, Modifier.weight(1f), onDelete)
-                EditorTool("Speed " + speed, Icons.Outlined.Speed, Modifier.weight(1f), onSpeed)
+                EditorTool("Speed", Icons.Outlined.Speed, Modifier.weight(1f), onSpeed)
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 EditorTool("Looks", Icons.Outlined.AutoFixHigh, Modifier.weight(1f), onEffects)
                 EditorTool("Graph", Icons.Outlined.AccountTree, Modifier.weight(1f), onNodes)
-                EditorTool("Add media", Icons.Outlined.FileUpload, Modifier.weight(1f), onImport)
+                EditorTool("Media", Icons.Outlined.FileUpload, Modifier.weight(1f), onImport)
             }
         }
         Spacer(Modifier.height(12.dp))
@@ -402,10 +407,12 @@ private fun EditorScreen(
 
 @Composable
 private fun EditorTool(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Surface(onClick = onClick, modifier = modifier.height(58.dp), shape = RoundedCornerShape(17.dp), color = surface2, border = androidx.compose.foundation.BorderStroke(1.dp, line), tonalElevation = 5.dp, shadowElevation = 3.dp) {
-        Row(Modifier.fillMaxSize().padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-            Icon(icon, contentDescription = label, tint = cyan, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(6.dp))
+    Surface(onClick = onClick, modifier = modifier.height(72.dp), shape = RoundedCornerShape(19.dp), color = surface2, border = androidx.compose.foundation.BorderStroke(1.dp, line), tonalElevation = 7.dp, shadowElevation = 4.dp) {
+        Column(Modifier.fillMaxSize().padding(vertical = 9.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(Modifier.size(30.dp).clip(RoundedCornerShape(10.dp)).background(violet.copy(alpha = .18f)), contentAlignment = Alignment.Center) {
+                Icon(icon, contentDescription = label, tint = cyan, modifier = Modifier.size(17.dp))
+            }
+            Spacer(Modifier.height(5.dp))
             Text(label, color = textMain, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
@@ -470,7 +477,13 @@ private fun NodesScreen(nodes: List<NodeItem>, onAdd: (String) -> Unit, onRemove
         }
         Spacer(Modifier.height(12.dp))
         Box {
-            OutlinedButton(onClick = { showMenu = true }, modifier = Modifier.fillMaxWidth()) { Text("＋ Add node") }
+            Surface(onClick = { showMenu = true }, modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(17.dp), color = surface2, border = androidx.compose.foundation.BorderStroke(1.dp, line)) {
+                Row(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("＋", color = cyan, fontSize = 22.sp)
+                    Text("Add a node", color = textMain, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f).padding(start = 10.dp))
+                    Text("⌄", color = textDim, fontSize = 18.sp)
+                }
+            }
             DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                 listOf("Color Adjust", "Blur", "Glow", "Transform", "Mask", "Blend").forEach { name ->
                     DropdownMenuItem(text = { Text(name) }, onClick = { onAdd(name); showMenu = false })
@@ -510,7 +523,12 @@ private fun SettingRow(title: String, value: String, options: List<String>, onCh
     Row(Modifier.fillMaxWidth().padding(vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(title, color = textMain, fontSize = 13.sp, modifier = Modifier.weight(1f))
         Box {
-            OutlinedButton(onClick = { expanded = true }) { Text(value) }
+            Surface(onClick = { expanded = true }, shape = RoundedCornerShape(14.dp), color = surface2, border = androidx.compose.foundation.BorderStroke(1.dp, line)) {
+                Row(Modifier.widthIn(min = 112.dp).padding(horizontal = 13.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(value, color = textMain, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                    Text("⌄", color = cyan, fontSize = 15.sp, modifier = Modifier.padding(start = 8.dp))
+                }
+            }
             DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                 options.forEach { option -> DropdownMenuItem(text = { Text(option) }, onClick = { onChange(option); expanded = false }) }
             }
@@ -531,7 +549,7 @@ private fun PageHeader(title: String, eyebrow: String, onBack: () -> Unit) {
 
 @Composable
 private fun ToolText(label: String, onClick: () -> Unit, size: Int) {
-    Surface(onClick = onClick, modifier = Modifier.size(42.dp), shape = CircleShape, color = surface2, border = androidx.compose.foundation.BorderStroke(1.dp, line)) {
+    Surface(onClick = onClick, modifier = Modifier.size(44.dp), shape = RoundedCornerShape(15.dp), color = surface2, border = androidx.compose.foundation.BorderStroke(1.dp, line)) {
         Box(contentAlignment = Alignment.Center) { Icon(Icons.Outlined.ArrowBack, contentDescription = "Back", tint = textMain) }
     }
 }
@@ -551,7 +569,12 @@ private fun formatTime(ms: Long): String {
 
 @Composable
 private fun PrimaryButton(label: String, onClick: () -> Unit) {
-    Button(onClick = onClick, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(16.dp), elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 2.dp), colors = ButtonDefaults.buttonColors(containerColor = violet, contentColor = Color.White)) {
-        Text(label, color = Color.White, fontSize = 13.sp, letterSpacing = .2.sp, fontWeight = FontWeight.Bold)
+    Surface(onClick = onClick, modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(18.dp), color = violet, shadowElevation = 6.dp) {
+        Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Color(0xFF7769D8), Color(0xFF368F9D)))), contentAlignment = Alignment.Center) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(label, color = Color.White, fontSize = 13.sp, letterSpacing = .3.sp, fontWeight = FontWeight.Bold)
+                Text("  ↗", color = Color.White.copy(alpha = .85f), fontSize = 15.sp)
+            }
+        }
     }
 }
