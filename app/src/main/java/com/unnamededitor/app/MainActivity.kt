@@ -291,6 +291,8 @@ private fun EditorScreen(
                         setVideoURI(videoUri)
                         setOnPreparedListener { mp ->
                             mp.isLooping = true
+                            val rate = speed.removeSuffix("×").toFloatOrNull() ?: 1f
+                            mp.setPlaybackParams(android.media.PlaybackParams().setSpeed(rate))
                             if (playing) start()
                         }
                         videoView.value = this
@@ -315,11 +317,7 @@ private fun EditorScreen(
         Spacer(Modifier.height(12.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("00:00:00", color = textMain, fontSize = 12.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
-            ToolText("↶", {}, 22)
-            Spacer(Modifier.width(8.dp))
             Box(Modifier.size(44.dp).clip(CircleShape).background(violet).clickable { onPlay() }, contentAlignment = Alignment.Center) { Text(if (playing) "Ⅱ" else "▶", color = Color.White, fontSize = 19.sp) }
-            Spacer(Modifier.width(8.dp))
-            ToolText("↷", {}, 22)
             Text("00:15:00", color = textDim, fontSize = 12.sp, modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.End)
         }
         Spacer(Modifier.height(15.dp))
