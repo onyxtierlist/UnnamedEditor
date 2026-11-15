@@ -123,7 +123,7 @@ private fun Edit(project: String, nodes: () -> Unit, effects: () -> Unit, export
             listOf("VIDEO", "AUDIO", "TEXT", "FX").forEachIndexed { i, label ->
                 Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(label, color = muted, fontSize = 9.sp, modifier = Modifier.width(42.dp))
-                    Box(Modifier.weight(1f).height(26.dp).background(listOf(Color(0xFF394D9C), Color(0xFF313D91), Color(0xFF376EAB), Color(0xFF6842A5))[i], RoundedCornerShape(5.dp))
+                    Box(Modifier.weight(1f).height(26.dp).background(listOf(Color(0xFF394D9C), Color(0xFF313D91), Color(0xFF376EAB), Color(0xFF6842A5))[i], RoundedCornerShape(5.dp)))
                 }
             }
         }
