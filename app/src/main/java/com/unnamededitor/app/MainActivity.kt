@@ -11,6 +11,17 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.ContentCut
+import androidx.compose.material.icons.outlined.DeleteOutline
+import androidx.compose.material.icons.outlined.FileUpload
+import androidx.compose.material.icons.outlined.Pause
+import androidx.compose.material.icons.outlined.PlayArrow
+import androidx.compose.material.icons.outlined.Speed
+import androidx.compose.material.icons.outlined.AutoFixHigh
+import androidx.compose.material.icons.outlined.AccountTree
+import androidx.compose.material3.Icon
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -351,22 +362,25 @@ private fun EditorScreen(
         }
         Spacer(Modifier.height(8.dp))
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            EditorTool("Split", "✂", onSplit)
-            EditorTool("Delete", "⌫", onDelete)
-            EditorTool("Speed " + speed, "◷", onSpeed)
-            EditorTool("Effects", "✧", onEffects)
-            EditorTool("Nodes", "◇", onNodes)
-            EditorTool("Import", "＋", onImport)
+            EditorTool("Split", Icons.Outlined.ContentCut, onSplit)
+            EditorTool("Delete", Icons.Outlined.DeleteOutline, onDelete)
+            EditorTool("Speed " + speed, Icons.Outlined.Speed, onSpeed)
+            EditorTool("Effects", Icons.Outlined.AutoFixHigh, onEffects)
+            EditorTool("Nodes", Icons.Outlined.AccountTree, onNodes)
+            EditorTool("Import", Icons.Outlined.FileUpload, onImport)
         }
         Spacer(Modifier.height(12.dp))
     }
 }
 
 @Composable
-private fun EditorTool(label: String, icon: String, onClick: () -> Unit) {
-    Column(Modifier.widthIn(min = 62.dp).clip(RoundedCornerShape(13.dp)).background(surface).clickable { onClick() }.padding(horizontal = 11.dp, vertical = 9.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(icon, color = violet, fontSize = 18.sp)
-        Text(label, color = textDim, fontSize = 9.sp, maxLines = 1)
+private fun EditorTool(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, onClick: () -> Unit) {
+    Surface(onClick = onClick, modifier = Modifier.widthIn(min = 68.dp), shape = RoundedCornerShape(14.dp), color = surface2, border = androidx.compose.foundation.BorderStroke(1.dp, line)) {
+        Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(icon, contentDescription = label, tint = violet, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.height(5.dp))
+            Text(label, color = textMain, fontSize = 9.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+        }
     }
 }
 
@@ -490,21 +504,21 @@ private fun PageHeader(title: String, eyebrow: String, onBack: () -> Unit) {
 
 @Composable
 private fun ToolText(label: String, onClick: () -> Unit, size: Int) {
-    Box(Modifier.size(38.dp).clip(CircleShape).background(surface).clickable { onClick() }, contentAlignment = Alignment.Center) {
-        Text(label, color = textMain, fontSize = size.sp)
+    Surface(onClick = onClick, modifier = Modifier.size(42.dp), shape = CircleShape, color = surface2, border = androidx.compose.foundation.BorderStroke(1.dp, line)) {
+        Box(contentAlignment = Alignment.Center) { Icon(Icons.Outlined.ArrowBack, contentDescription = "Back", tint = textMain) }
     }
 }
 
 @Composable
 private fun ToolPill(label: String, onClick: () -> Unit, highlighted: Boolean = false) {
-    Box(Modifier.clip(RoundedCornerShape(50)).background(if (highlighted) violet else surface2).clickable { onClick() }.padding(horizontal = 12.dp, vertical = 8.dp)) {
-        Text(label, color = textMain, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+    Surface(onClick = onClick, shape = RoundedCornerShape(12.dp), color = if (highlighted) violet else surface2, border = if (highlighted) null else androidx.compose.foundation.BorderStroke(1.dp, line)) {
+        Text(label, color = textMain, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 13.dp, vertical = 10.dp))
     }
 }
 
 @Composable
 private fun PrimaryButton(label: String, onClick: () -> Unit) {
-    Button(onClick = onClick, modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(15.dp), colors = ButtonDefaults.buttonColors(containerColor = violet)) {
-        Text(label, color = Color.White, fontWeight = FontWeight.Bold)
+    Button(onClick = onClick, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(16.dp), elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 2.dp), colors = ButtonDefaults.buttonColors(containerColor = violet, contentColor = Color.White)) {
+        Text(label, color = Color.White, fontSize = 13.sp, letterSpacing = .2.sp, fontWeight = FontWeight.Bold)
     }
 }
