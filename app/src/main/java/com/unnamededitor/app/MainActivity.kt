@@ -46,15 +46,16 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import androidx.compose.ui.viewinterop.AndroidView
 
-private val ink = Color(0xFF080B13)
-private val surface = Color(0xFF111827)
-private val surface2 = Color(0xFF182235)
-private val line = Color(0xFF29364D)
-private val violet = Color(0xFF9B7BFF)
-private val cyan = Color(0xFF66D9E8)
-private val textMain = Color(0xFFF4F6FF)
-private val textDim = Color(0xFF8996AD)
-private val gradient = Brush.linearGradient(listOf(Color(0xFF34266F), Color(0xFF174B68), Color(0xFF171E39)))
+private val ink = Color(0xFF080D1A)
+private val surface = Color(0xCC18243A)
+private val surface2 = Color(0xB3263652)
+private val line = Color(0x36D8E8FF)
+private val violet = Color(0xFF9B91FF)
+private val cyan = Color(0xFF79E6D3)
+private val textMain = Color(0xFFF3F7FF)
+private val textDim = Color(0xFFA1B0C8)
+private val gradient = Brush.linearGradient(listOf(Color(0xFF5546A8), Color(0xFF236F83), Color(0xFF172944)))
+private val glassGradient = Brush.linearGradient(listOf(Color(0xCCFFFFFF), Color(0x14FFFFFF), Color(0x221A9CBB)))
 
 private data class ClipItem(val id: Int, val title: String, val kind: String, val tint: Color)
 private data class NodeItem(val id: Int, val title: String, val detail: String)
@@ -117,6 +118,8 @@ private fun UnnamedEditor() {
         onPrimary = Color.White, onSurface = textMain
     )) {
         Surface(Modifier.fillMaxSize(), color = ink) {
+            Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF0A1020), Color(0xFF101C32), Color(0xFF0B1727))))) {
+            Box(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(Color(0x333E83A5), Color.Transparent), radius = 900f))) {
             AnimatedContent(targetState = page, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "page") { current ->
                 when (current) {
                     "Home" -> HomeScreen(
@@ -169,6 +172,8 @@ private fun UnnamedEditor() {
                         onResolution = { resolution = it }, onFrameRate = { frameRate = it }, onQuality = { quality = it },
                         onBack = { page = "Editor" }, onExport = { showExportInfo = true })
                 }
+            }
+            }
             }
         }
     }
@@ -229,7 +234,7 @@ private fun HomeScreen(projectName: String, onNew: () -> Unit, onOpen: () -> Uni
             }
         }
         Spacer(Modifier.height(24.dp))
-        Box(Modifier.fillMaxWidth().height(190.dp).clip(RoundedCornerShape(28.dp)).background(gradient).clickable { onNew() }.padding(22.dp)) {
+        Box(Modifier.fillMaxWidth().height(190.dp).clip(RoundedCornerShape(28.dp)).background(gradient).border(1.dp, Color.White.copy(alpha = .22f), RoundedCornerShape(28.dp)).clickable { onNew() }.padding(22.dp)) {
             Column(Modifier.align(Alignment.CenterStart)) {
                 Surface(color = Color.White.copy(alpha = .12f), shape = RoundedCornerShape(50)) {
                     Text("NEW WORKSPACE", color = textMain, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp, modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp))
@@ -252,7 +257,7 @@ private fun HomeScreen(projectName: String, onNew: () -> Unit, onOpen: () -> Uni
             Text("VIEW ALL", color = cyan, fontSize = 9.sp, fontWeight = FontWeight.Bold)
         }
         Spacer(Modifier.height(12.dp))
-        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(surface).clickable { onOpen() }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(glassGradient).border(1.dp, line, RoundedCornerShape(18.dp)).clickable { onOpen() }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(64.dp, 54.dp).clip(RoundedCornerShape(12.dp)).background(gradient), contentAlignment = Alignment.Center) { Text("▶", color = Color.White, fontSize = 20.sp) }
             Column(Modifier.weight(1f).padding(start = 13.dp)) {
                 Text(projectName, color = textMain, fontWeight = FontWeight.SemiBold)
@@ -268,7 +273,7 @@ private fun HomeScreen(projectName: String, onNew: () -> Unit, onOpen: () -> Uni
 
 @Composable
 private fun QuickAction(title: String, icon: String, modifier: Modifier, onClick: () -> Unit) {
-    Row(modifier.height(62.dp).clip(RoundedCornerShape(16.dp)).background(surface).clickable { onClick() }.padding(horizontal = 13.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(modifier.height(62.dp).clip(RoundedCornerShape(16.dp)).background(glassGradient).border(1.dp, line, RoundedCornerShape(16.dp)).clickable { onClick() }.padding(horizontal = 13.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(icon, color = violet, fontSize = 23.sp)
         Text(title, color = textMain, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 9.dp))
     }
@@ -309,7 +314,7 @@ private fun EditorScreen(
             ToolPill("Export ↗", onExport, true)
         }
         Spacer(Modifier.height(14.dp))
-        Box(Modifier.fillMaxWidth().weight(1f).clip(RoundedCornerShape(22.dp)).background(Color(0xFF05070C)), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxWidth().weight(1f).clip(RoundedCornerShape(22.dp)).background(Brush.linearGradient(listOf(Color(0xFF17263A), Color(0xFF080E1B)))).border(1.dp, line, RoundedCornerShape(22.dp)), contentAlignment = Alignment.Center) {
             if (videoUri != null) {
                 AndroidView(factory = { ctx ->
                     VideoView(ctx).apply {
@@ -357,7 +362,7 @@ private fun EditorScreen(
             ToolPill("＋ Layer", onAddLayer)
         }
         Spacer(Modifier.height(8.dp))
-        Column(Modifier.fillMaxWidth().heightIn(min = 142.dp, max = 205.dp).clip(RoundedCornerShape(16.dp)).background(surface).padding(10.dp).verticalScroll(rememberScrollState())) {
+        Column(Modifier.fillMaxWidth().heightIn(min = 142.dp, max = 205.dp).clip(RoundedCornerShape(16.dp)).background(glassGradient).border(1.dp, line, RoundedCornerShape(16.dp)).padding(10.dp).verticalScroll(rememberScrollState())) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("00:00", color = textDim, fontSize = 9.sp)
                 Text("00:05", color = textDim, fontSize = 9.sp)
@@ -397,7 +402,7 @@ private fun EditorScreen(
 
 @Composable
 private fun EditorTool(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Surface(onClick = onClick, modifier = modifier.height(58.dp), shape = RoundedCornerShape(17.dp), color = surface, border = androidx.compose.foundation.BorderStroke(1.dp, line)) {
+    Surface(onClick = onClick, modifier = modifier.height(58.dp), shape = RoundedCornerShape(17.dp), color = surface2, border = androidx.compose.foundation.BorderStroke(1.dp, line), tonalElevation = 5.dp, shadowElevation = 3.dp) {
         Row(Modifier.fillMaxSize().padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
             Icon(icon, contentDescription = label, tint = cyan, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(6.dp))
@@ -426,7 +431,7 @@ private fun EffectsScreen(active: Set<String>, onToggle: (String) -> Unit, onBac
         Spacer(Modifier.height(10.dp))
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(9.dp)) {
             effects.forEach { (name, detail) ->
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(surface).clickable { onToggle(name) }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(glassGradient).border(1.dp, line, RoundedCornerShape(16.dp)).clickable { onToggle(name) }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(42.dp).clip(RoundedCornerShape(12.dp)).background(surface2), contentAlignment = Alignment.Center) { Text("✧", color = violet, fontSize = 21.sp) }
                     Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
                         Text(name, color = textMain, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
@@ -447,7 +452,7 @@ private fun NodesScreen(nodes: List<NodeItem>, onAdd: (String) -> Unit, onRemove
         PageHeader("Node workspace", "COMPOSITING GRAPH", onBack)
         Text("Manage the processing chain. Nodes can be added and removed.", color = textDim, fontSize = 11.sp)
         Spacer(Modifier.height(15.dp))
-        Box(Modifier.weight(1f).fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(surface).padding(14.dp)) {
+        Box(Modifier.weight(1f).fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(glassGradient).border(1.dp, line, RoundedCornerShape(20.dp)).padding(14.dp)) {
             Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
                 nodes.forEachIndexed { index, node ->
                     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).border(1.dp, violet.copy(alpha = .6f), RoundedCornerShape(14.dp)).background(surface2).padding(13.dp), verticalAlignment = Alignment.CenterVertically) {
