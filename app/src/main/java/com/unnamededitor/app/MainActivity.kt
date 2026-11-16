@@ -49,16 +49,16 @@ import org.json.JSONArray
 import org.json.JSONObject
 import androidx.compose.ui.viewinterop.AndroidView
 
-private val ink = Color(0xFF080D1A)
-private val surface = Color(0xCC18243A)
-private val surface2 = Color(0xB3263652)
-private val line = Color(0x36D8E8FF)
-private val violet = Color(0xFF9B91FF)
-private val cyan = Color(0xFF79E6D3)
-private val textMain = Color(0xFFF3F7FF)
-private val textDim = Color(0xFFA1B0C8)
-private val gradient = Brush.linearGradient(listOf(Color(0xFF5546A8), Color(0xFF236F83), Color(0xFF172944)))
-private val glassGradient = Brush.linearGradient(listOf(Color(0xCCFFFFFF), Color(0x14FFFFFF), Color(0x221A9CBB)))
+private val ink = Color(0xFF10120F)
+private val surface = Color(0xFF1B1F19)
+private val surface2 = Color(0xFF272D24)
+private val line = Color(0xFF3A4335)
+private val violet = Color(0xFFB7F36B)
+private val cyan = Color(0xFFD5FF9B)
+private val textMain = Color(0xFFF4F5EE)
+private val textDim = Color(0xFFA4AA9A)
+private val gradient = Brush.linearGradient(listOf(Color(0xFF343D2A), Color(0xFF20261B), Color(0xFF171B15)))
+private val glassGradient = Brush.linearGradient(listOf(Color(0xFF252A22), Color(0xFF1B2019), Color(0xFF171B15)))
 
 private data class ClipItem(val id: Int, val title: String, val kind: String, val tint: Color)
 private data class NodeItem(val id: Int, val title: String, val detail: String)
@@ -67,8 +67,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         AppContextHolder.context = applicationContext
-        window.statusBarColor = android.graphics.Color.rgb(8, 11, 19)
-        window.navigationBarColor = android.graphics.Color.rgb(8, 11, 19)
+        window.statusBarColor = android.graphics.Color.rgb(16, 18, 15)
+        window.navigationBarColor = android.graphics.Color.rgb(16, 18, 15)
         setContent { UnnamedEditor() }
     }
 }
@@ -143,7 +143,7 @@ private fun UnnamedEditor() {
             runCatching { context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) }
             videoName = uri.lastPathSegment?.substringAfterLast('/') ?: "Imported video"
             playing = false
-            if (clips.none { it.kind == "VIDEO" }) clips = clips + ClipItem(nextId++, videoName, "VIDEO", Color(0xFF526BC2))
+            if (clips.none { it.kind == "VIDEO" }) clips = clips + ClipItem(nextId++, videoName, "VIDEO", Color(0xFF6B8E42))
             notice = "Media imported successfully"
         }
     }
@@ -153,8 +153,8 @@ private fun UnnamedEditor() {
         onPrimary = Color.White, onSurface = textMain
     )) {
         Surface(Modifier.fillMaxSize(), color = ink) {
-            Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF0A1020), Color(0xFF101C32), Color(0xFF0B1727))))) {
-            Box(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(Color(0x333E83A5), Color.Transparent), radius = 900f))) {
+            Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF10120F), Color(0xFF171B15), Color(0xFF10120F))))) {
+            Box(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(Color(0x223D542D), Color.Transparent), radius = 900f))) {
             AnimatedContent(targetState = page, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "page") { current ->
                 when (current) {
                     "Home" -> HomeScreen(
@@ -243,7 +243,7 @@ private fun UnnamedEditor() {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("VIDEO", "AUDIO", "TEXT", "FX").forEach { kind ->
                         OutlinedButton(onClick = {
-                            val tint = when (kind) { "VIDEO" -> Color(0xFF526BC2); "AUDIO" -> Color(0xFF238E91); "TEXT" -> Color(0xFF9866C8); else -> Color(0xFFB47754) }
+                            val tint = when (kind) { "VIDEO" -> Color(0xFF526BC2); "AUDIO" -> Color(0xFF4D9974); "TEXT" -> Color(0xFF9A8B58); else -> Color(0xFFB7774E) }
                             clips = clips + ClipItem(nextId++, kind.lowercase().replaceFirstChar { it.uppercase() } + " layer", kind, tint)
                             showAddLayer = false
                             notice = kind + " layer added"
@@ -271,66 +271,63 @@ private fun UnnamedEditor() {
 
 @Composable
 private fun HomeScreen(projectName: String, onNew: () -> Unit, onOpen: () -> Unit, onImport: () -> Unit, onEffects: () -> Unit) {
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)) {
-        Spacer(Modifier.height(24.dp))
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 22.dp)) {
+        Spacer(Modifier.height(30.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("UNNAMED STUDIO", color = cyan, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
-                Text("Make it move.", color = textMain, fontSize = 29.sp, fontWeight = FontWeight.Bold)
-                Text("Your creative space", color = textDim, fontSize = 13.sp)
-            }
-            Box(Modifier.size(46.dp).clip(CircleShape).background(surface2), contentAlignment = Alignment.Center) {
-                Text("U", color = violet, fontSize = 22.sp, fontWeight = FontWeight.Black)
-            }
-        }
-        Spacer(Modifier.height(24.dp))
-        Box(Modifier.fillMaxWidth().height(190.dp).clip(RoundedCornerShape(28.dp)).background(gradient).border(1.dp, Color.White.copy(alpha = .22f), RoundedCornerShape(28.dp)).clickable { onNew() }.padding(22.dp)) {
-            Column(Modifier.align(Alignment.CenterStart)) {
-                Surface(color = Color.White.copy(alpha = .12f), shape = RoundedCornerShape(50)) {
-                    Text("NEW WORKSPACE", color = textMain, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp, modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp))
-                }
-                Spacer(Modifier.height(14.dp))
-                Text("Start a new\ncreation.", color = Color.White, fontSize = 25.sp, lineHeight = 29.sp, fontWeight = FontWeight.Bold)
+                Text("UNNAMED  /  STUDIO", color = lime, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
                 Spacer(Modifier.height(8.dp))
-                Text("Build something worth watching  ↗", color = Color.White.copy(alpha = .75f), fontSize = 11.sp)
+                Text("Create something\nthat hits.", color = textMain, fontSize = 34.sp, lineHeight = 38.sp, fontWeight = FontWeight.Black)
+                Text("A mobile editing space.", color = textDim, fontSize = 13.sp)
             }
-            Text("✦", color = Color.White.copy(alpha = .22f), fontSize = 90.sp, modifier = Modifier.align(Alignment.BottomEnd))
-        }
-        Spacer(Modifier.height(18.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            QuickAction("Import video", "＋", Modifier.weight(1f), onImport)
-            QuickAction("Explore FX", "✧", Modifier.weight(1f), onEffects)
+            Box(Modifier.size(54.dp).clip(RoundedCornerShape(18.dp)).background(lime), contentAlignment = Alignment.Center) {
+                Text("U.", color = ink, fontSize = 24.sp, fontWeight = FontWeight.Black)
+            }
         }
         Spacer(Modifier.height(26.dp))
+        Box(Modifier.fillMaxWidth().height(205.dp).clip(RoundedCornerShape(26.dp)).background(Color(0xFF20251E)).border(1.dp, Color(0xFF424B37), RoundedCornerShape(26.dp)).clickable { onNew() }.padding(22.dp)) {
+            Column(Modifier.align(Alignment.CenterStart)) {
+                Text("✦  NEW PROJECT", color = lime, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
+                Spacer(Modifier.height(16.dp))
+                Text("Your next\nmasterpiece.", color = textMain, fontSize = 27.sp, lineHeight = 31.sp, fontWeight = FontWeight.Bold)
+                Spacer(Modifier.height(10.dp))
+                Text("Start with a blank timeline  →", color = textDim, fontSize = 12.sp)
+            }
+            Text("✳", color = lime.copy(alpha = .14f), fontSize = 110.sp, modifier = Modifier.align(Alignment.BottomEnd))
+        }
+        Spacer(Modifier.height(14.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            HomeAction("Import media", "＋", Modifier.weight(1f), onImport)
+            HomeAction("Effects lab", "✳", Modifier.weight(1f), onEffects)
+        }
+        Spacer(Modifier.height(30.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Recent projects", color = textMain, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-            Text("VIEW ALL", color = cyan, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+            Text("Pick up where you left off", color = textMain, fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            Text("RECENT", color = lime, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
         }
         Spacer(Modifier.height(12.dp))
-        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(glassGradient).border(1.dp, line, RoundedCornerShape(18.dp)).clickable { onOpen() }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(64.dp, 54.dp).clip(RoundedCornerShape(12.dp)).background(gradient), contentAlignment = Alignment.Center) { Text("▶", color = Color.White, fontSize = 20.sp) }
-            Column(Modifier.weight(1f).padding(start = 13.dp)) {
-                Text(projectName, color = textMain, fontWeight = FontWeight.SemiBold)
-                Text("Continue editing  ·  Draft", color = textDim, fontSize = 11.sp)
+        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(surface).border(1.dp, line, RoundedCornerShape(20.dp)).clickable { onOpen() }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(68.dp, 58.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xFF30372B)), contentAlignment = Alignment.Center) { Text("▶", color = lime, fontSize = 22.sp) }
+            Column(Modifier.weight(1f).padding(start = 14.dp)) {
+                Text(projectName, color = textMain, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Spacer(Modifier.height(4.dp))
+                Text("Draft  ·  Tap to continue", color = textDim, fontSize = 11.sp)
             }
-            Text("›", color = violet, fontSize = 28.sp)
+            Text("↗", color = lime, fontSize = 22.sp)
         }
         Spacer(Modifier.height(26.dp))
-        Text("Every frame, your way.", color = textDim, fontSize = 11.sp)
+        Text("CUT  /  COLOR  /  CREATE", color = textDim, fontSize = 10.sp, letterSpacing = 2.sp)
         Spacer(Modifier.height(24.dp))
     }
 }
 
 @Composable
-private fun QuickAction(title: String, icon: String, modifier: Modifier, onClick: () -> Unit) {
-    Column(modifier.height(92.dp).clip(RoundedCornerShape(20.dp)).background(glassGradient).border(1.dp, line, RoundedCornerShape(20.dp)).clickable { onClick() }.padding(13.dp), verticalArrangement = Arrangement.SpaceBetween) {
-        Box(Modifier.size(34.dp).clip(RoundedCornerShape(12.dp)).background(violet.copy(alpha = .18f)), contentAlignment = Alignment.Center) {
-            Text(icon, color = cyan, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+private fun HomeAction(title: String, icon: String, modifier: Modifier, onClick: () -> Unit) {
+    Row(modifier.height(68.dp).clip(RoundedCornerShape(18.dp)).background(surface).border(1.dp, line, RoundedCornerShape(18.dp)).clickable { onClick() }.padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(36.dp).clip(RoundedCornerShape(12.dp)).background(lime.copy(alpha = .12f)), contentAlignment = Alignment.Center) {
+            Text(icon, color = lime, fontSize = 21.sp, fontWeight = FontWeight.Bold)
         }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(title, color = textMain, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-            Text("↗", color = cyan, fontSize = 15.sp)
-        }
+        Text(title, color = textMain, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 9.dp).weight(1f))
     }
 }
 
@@ -371,7 +368,7 @@ private fun EditorScreen(
             ToolPill("Export ↗", onExport, true)
         }
         Spacer(Modifier.height(14.dp))
-        Box(Modifier.fillMaxWidth().weight(1f).clip(RoundedCornerShape(22.dp)).background(Brush.linearGradient(listOf(Color(0xFF17263A), Color(0xFF080E1B)))).border(1.dp, line, RoundedCornerShape(22.dp)), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxWidth().weight(1f).clip(RoundedCornerShape(22.dp)).background(Brush.linearGradient(listOf(Color(0xFF242A20), Color(0xFF11140F)))).border(1.dp, line, RoundedCornerShape(22.dp)), contentAlignment = Alignment.Center) {
             if (videoUri != null) {
                 AndroidView(factory = { ctx ->
                     VideoView(ctx).apply {
