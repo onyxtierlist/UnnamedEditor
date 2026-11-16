@@ -97,13 +97,13 @@ private object AppContextHolder { lateinit var context: android.content.Context 
 private fun UnnamedEditor() {
     var page by remember { mutableStateOf("Home") }
     var projectName by remember { mutableStateOf(contextPrefsName()) }
-    var videoUri by remember { mutableStateOf(contextPrefsUri()) } }
+    var videoUri by remember { mutableStateOf(contextPrefsUri()) }
     var videoName by remember { mutableStateOf(contextPrefsVideoName()) }
     var playing by remember { mutableStateOf(false) }
     var playheadMs by remember { mutableLongStateOf(0L) }
     var durationMs by remember { mutableLongStateOf(0L) }
     var selectedClip by remember { mutableIntStateOf(1) }
-    var nextId by remember { mutableIntStateOf(5) }
+    var nextId by remember { mutableIntStateOf((loadSavedClips().maxOfOrNull { it.id } ?: 4) + 1) }
     var notice by remember { mutableStateOf("Ready to create") }
     var showNewProject by remember { mutableStateOf(false) }
     var newName by remember { mutableStateOf("My first edit") }
@@ -115,7 +115,7 @@ private fun UnnamedEditor() {
         NodeItem(3, "Glow", "Stylize"),
         NodeItem(4, "Composite", "Output")
     )) }
-    var activeEffects by remember { mutableStateOf(loadSavedEffects()) } }
+    var activeEffects by remember { mutableStateOf(loadSavedEffects()) }
     var resolution by remember { mutableStateOf(contextPrefs("resolution", "1080p")) }
     var frameRate by remember { mutableStateOf(contextPrefs("frameRate", "30 FPS")) }
     var quality by remember { mutableStateOf(contextPrefs("quality", "High")) }
