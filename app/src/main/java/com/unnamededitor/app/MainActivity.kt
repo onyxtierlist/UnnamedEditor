@@ -26,6 +26,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -44,6 +45,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.input.pointer.pointerInput
 import kotlinx.coroutines.delay
 import org.json.JSONArray
 import org.json.JSONObject
@@ -438,7 +440,19 @@ private fun EditorScreen(
 
         // Timeline ruler and layered tracks.
         Column(Modifier.fillMaxWidth().background(Color(0xFF111315)).padding(top = 7.dp, bottom = 5.dp)) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 13.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 13.dp)
+                    .pointerInput(durationMs) {
+                        detectTapGestures { tap ->
+                            if (durationMs > 0L) {
+                                val target = ((tap.x / size.width).coerceIn(0f, 1f) * durationMs).toLong()
+                                onSeek(target)
+                                videoView.value?.seekTo(target.toInt())
+                            }
+                        }
+                    },
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text("00:00", color = Color(0xFFB9BDC1), fontSize = 9.sp, modifier = Modifier.weight(1f))
                 Text("00:05", color = Color(0xFFB9BDC1), fontSize = 9.sp, modifier = Modifier.weight(1f))
                 Text("00:10", color = Color(0xFFB9BDC1), fontSize = 9.sp, modifier = Modifier.weight(1f))
