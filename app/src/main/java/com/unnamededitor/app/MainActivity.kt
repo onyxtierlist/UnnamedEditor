@@ -457,7 +457,7 @@ private fun EditorScreen(
                 if (durationMs > 0L && videoUri != null) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("IN", color = cyan, fontSize = 8.sp, modifier = Modifier.width(52.dp))
-                        Slider(value = trimStartMs.coerceIn(0L, durationMs).toFloat(), onValueChange = { value -> onTrimStart(value.toLong().coerceAtMost((trimEndMs.takeIf { it > 0L } ?: durationMs) - 1L) }, valueRange = 0f..durationMs.toFloat(), modifier = Modifier.weight(1f).height(25.dp))
+                        Slider(value = trimStartMs.coerceIn(0L, durationMs).toFloat(), onValueChange = { value -> onTrimStart(value.toLong().coerceAtMost((trimEndMs.takeIf { it > 0L } ?: durationMs) - 1L)) }, valueRange = 0f..durationMs.toFloat(), modifier = Modifier.weight(1f).height(25.dp))
                         Text(formatTime(trimStartMs), color = textDim, fontSize = 9.sp)
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
