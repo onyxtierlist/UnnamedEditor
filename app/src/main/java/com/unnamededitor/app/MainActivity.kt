@@ -245,7 +245,7 @@ private fun UnnamedEditor() {
                             if (videoUri == null) { exportMessage = "Import a video first"; showExportInfo = true }
                             else {
                                 exporting = true; exportProgress = 0; exportMessage = "Preparing video…"
-                                MediaExportEngine.export(context, videoUri!!, trimStartMs, trimEndMs.takeIf { it > 0L },
+                                MediaExportEngine.export(context, videoUri!!, trimStartMs, trimEndMs.takeIf { it > 0L }, resolution, quality,
                                     onProgress = { exportProgress = it; exportMessage = "Rendering… $it%" },
                                     onComplete = { file -> exporting = false; exportProgress = 100; exportMessage = "Export complete: " + file.absolutePath; showExportInfo = true },
                                     onError = { error -> exporting = false; exportMessage = error; showExportInfo = true })
@@ -461,6 +461,8 @@ private fun EditorScreen(
         ) {
             Text(formatTime(playheadMs), color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
             Text(" / " + formatTime(durationMs), color = Color(0xFF85898D), fontSize = 11.sp, modifier = Modifier.weight(1f))
+            IconButton(onClick = onUndo, enabled = canUndo, modifier = Modifier.size(34.dp)) { Icon(Icons.Outlined.Undo, contentDescription = "Undo", tint = if (canUndo) Color.White else Color(0xFF555A5D), modifier = Modifier.size(19.dp)) }
+            IconButton(onClick = onRedo, enabled = canRedo, modifier = Modifier.size(34.dp)) { Icon(Icons.Outlined.Redo, contentDescription = "Redo", tint = if (canRedo) Color.White else Color(0xFF555A5D), modifier = Modifier.size(19.dp)) }
             IconButton(onClick = onUndo, enabled = canUndo, modifier = Modifier.size(34.dp)) { Icon(Icons.Outlined.Undo, contentDescription = "Undo", tint = if (canUndo) Color.White else Color(0xFF555A5D), modifier = Modifier.size(19.dp)) }
             IconButton(onClick = onRedo, enabled = canRedo, modifier = Modifier.size(34.dp)) { Icon(Icons.Outlined.Redo, contentDescription = "Redo", tint = if (canRedo) Color.White else Color(0xFF555A5D), modifier = Modifier.size(19.dp)) }
             IconButton(onClick = onPlay, modifier = Modifier.size(38.dp)) {
