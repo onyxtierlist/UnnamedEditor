@@ -47,7 +47,7 @@ object MediaExportEngine {
         val encoderFactory = DefaultEncoderFactory.Builder(context)
             .setRequestedVideoEncoderSettings(videoSettings)
             .build()
-        val effects = Effects(emptyList(), listOf(Presentation.createForShortSide(outputShortSide)))
+        val effects = Effects(emptyList(), listOf(Presentation.createForHeight(outputShortSide)))
         val edited = EditedMediaItem.Builder(item).setEffects(effects).build()
         val transformer = Transformer.Builder(context)
             .setEncoderFactory(encoderFactory)
