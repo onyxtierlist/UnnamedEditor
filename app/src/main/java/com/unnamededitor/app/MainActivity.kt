@@ -77,7 +77,7 @@ private fun contextPrefs(key: String, fallback: String): String = appPrefs().get
 private fun contextPrefsName(): String = contextPrefs("projectName", "Untitled Project")
 private fun contextPrefsUri(): Uri? = appPrefs().getString("videoUri", null)?.let { runCatching { Uri.parse(it) }.getOrNull() }
 private fun contextPrefsVideoName(): String = contextPrefs("videoName", "No media imported")
-private fun appPrefs() = androidx.preference.PreferenceManager.getDefaultSharedPreferences(AppContextHolder.context)
+private fun appPrefs() = AppContextHolder.context.getSharedPreferences("unnamed_editor_projects", android.content.Context.MODE_PRIVATE)
 private fun loadSavedClips(): List<ClipItem> = runCatching {
     val arr = JSONArray(appPrefs().getString("clips", "[]"))
     (0 until arr.length()).map { i -> arr.getJSONObject(i).let { ClipItem(it.getInt("id"), it.getString("title"), it.getString("kind"), Color(it.getLong("tint").toLong())) } }
