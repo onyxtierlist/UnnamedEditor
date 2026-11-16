@@ -19,6 +19,8 @@ import androidx.compose.material.icons.outlined.FileUpload
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Speed
+import androidx.compose.material.icons.outlined.Undo
+import androidx.compose.material.icons.outlined.Redo
 import androidx.compose.material.icons.outlined.AutoFixHigh
 import androidx.compose.material.icons.outlined.AccountTree
 import androidx.compose.material3.Icon
@@ -64,6 +66,7 @@ private val gradient = Brush.linearGradient(listOf(Color(0xFF343D2A), Color(0xFF
 private val glassGradient = Brush.linearGradient(listOf(Color(0xFF252A22), Color(0xFF1B2019), Color(0xFF171B15)))
 
 private data class ClipItem(val id: Int, val title: String, val kind: String, val tint: Color)
+private data class EditorSnapshot(val clips: List<ClipItem>, val effects: Set<String>, val speed: String, val trimStartMs: Long, val trimEndMs: Long, val previewX: Float, val previewY: Float)
 private data class NodeItem(val id: Int, val title: String, val detail: String)
 
 class MainActivity : ComponentActivity() {
