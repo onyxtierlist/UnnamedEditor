@@ -130,6 +130,7 @@ private fun UnnamedEditor() {
     var exportProgress by remember { mutableIntStateOf(0) }
     var exportMessage by remember { mutableStateOf("Ready to export") }
     var exporting by remember { mutableStateOf(false) }
+    var editorCategory by remember { mutableStateOf("Edit") }
     val context = LocalContext.current
     LaunchedEffect(projectName, videoUri, videoName, clips, activeEffects, resolution, frameRate, quality, previewX, previewY, timelineOffsetMs, trimStartMs, trimEndMs) {
         saveEditorState(context, projectName, videoUri, videoName, clips, activeEffects, resolution, frameRate, quality)
@@ -193,7 +194,7 @@ private fun UnnamedEditor() {
                         onEffects = { page = "Effects" },
                         onNodes = { page = "Nodes" },
                         onExport = { page = "Export" },
-                        previewX = previewX, previewY = previewY, timelineOffsetMs = timelineOffsetMs, trimStartMs = trimStartMs, trimEndMs = trimEndMs,
+                        previewX = previewX, previewY = previewY, timelineOffsetMs = timelineOffsetMs, trimStartMs = trimStartMs, trimEndMs = trimEndMs, editorCategory = editorCategory, onCategory = { editorCategory = it },
                         onPreviewX = { previewX = it }, onPreviewY = { previewY = it }, onTimelineOffset = { timelineOffsetMs = it },
                         onTrimStart = { trimStartMs = it }, onTrimEnd = { trimEndMs = it }
                     )
@@ -337,7 +338,7 @@ private fun QuickAction(title: String, icon: String, modifier: Modifier, onClick
 private fun EditorScreen(
     project: String, videoUri: Uri?, videoName: String, playing: Boolean, clips: List<ClipItem>,
     selectedClip: Int, speed: String, notice: String, playheadMs: Long, durationMs: Long,
-    previewX: Float, previewY: Float, timelineOffsetMs: Long, trimStartMs: Long, trimEndMs: Long,
+    previewX: Float, previewY: Float, timelineOffsetMs: Long, trimStartMs: Long, trimEndMs: Long, editorCategory: String, onCategory: (String) -> Unit,
     onPreviewX: (Float) -> Unit, onPreviewY: (Float) -> Unit, onTimelineOffset: (Long) -> Unit, onTrimStart: (Long) -> Unit, onTrimEnd: (Long) -> Unit,
     onBack: () -> Unit, onImport: () -> Unit,
     onPlay: () -> Unit, onPosition: (Long) -> Unit, onDuration: (Long) -> Unit, onSeek: (Long) -> Unit,
@@ -469,16 +470,43 @@ private fun EditorScreen(
             }
         }
         Spacer(Modifier.height(8.dp))
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                EditorTool("Split", Icons.Outlined.ContentCut, Modifier.weight(1f), onSplit)
-                EditorTool("Remove", Icons.Outlined.DeleteOutline, Modifier.weight(1f), onDelete)
-                EditorTool("Speed", Icons.Outlined.Speed, Modifier.weight(1f), onSpeed)
+        // CapCut-inspired contextual tool dock: categories first, tools below.
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+            listOf("Edit", "Audio", "Text", "Overlay", "Effects", "Filters", "Adjust").forEach { category ->
+                Surface(onClick = { onCategory(category) }, shape = RoundedCornerShape(12.dp),
+                    color = if (editorCategory == category) violet.copy(alpha = .24f) else surface2,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, if (editorCategory == category) violet else line)) {
+                    Text(category, color = if (editorCategory == category) cyan else textDim, fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp))
+                }
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                EditorTool("Looks", Icons.Outlined.AutoFixHigh, Modifier.weight(1f), onEffects)
-                EditorTool("Graph", Icons.Outlined.AccountTree, Modifier.weight(1f), onNodes)
-                EditorTool("Media", Icons.Outlined.FileUpload, Modifier.weight(1f), onImport)
+        }
+        Spacer(Modifier.height(7.dp))
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            when (editorCategory) {
+                "Edit" -> {
+                    EditorTool("Split", Icons.Outlined.ContentCut, Modifier.width(76.dp), onSplit)
+                    EditorTool("Delete", Icons.Outlined.DeleteOutline, Modifier.width(76.dp), onDelete)
+                    EditorTool("Speed", Icons.Outlined.Speed, Modifier.width(76.dp), onSpeed)
+                    EditorTool("Transform", Icons.Outlined.AutoFixHigh, Modifier.width(76.dp)) { onCategory("Adjust") }
+                }
+                "Audio" -> {
+                    EditorTool("Add audio", Icons.Outlined.FileUpload, Modifier.width(86.dp), onAddLayer)
+                    EditorTool("Extract", Icons.Outlined.Speed, Modifier.width(86.dp), onAddLayer)
+                    EditorTool("Volume", Icons.Outlined.AutoFixHigh, Modifier.width(86.dp), onAddLayer)
+                }
+                "Text" -> {
+                    EditorTool("Add text", Icons.Outlined.AutoFixHigh, Modifier.width(86.dp), onAddLayer)
+                    EditorTool("Captions", Icons.Outlined.FileUpload, Modifier.width(86.dp), onAddLayer)
+                }
+                "Overlay" -> EditorTool("Add overlay", Icons.Outlined.FileUpload, Modifier.width(100.dp), onAddLayer)
+                "Effects" -> EditorTool("Video effects", Icons.Outlined.AutoFixHigh, Modifier.width(100.dp), onEffects)
+                "Filters" -> EditorTool("Browse filters", Icons.Outlined.AutoFixHigh, Modifier.width(100.dp), onEffects)
+                else -> {
+                    EditorTool("Position", Icons.Outlined.AutoFixHigh, Modifier.width(86.dp)) { onCategory("Edit") }
+                    EditorTool("Keyframes", Icons.Outlined.Speed, Modifier.width(86.dp)) { onCategory("Edit") }
+                    EditorTool("Graph", Icons.Outlined.AccountTree, Modifier.width(86.dp), onNodes)
+                }
             }
         }
         Spacer(Modifier.height(12.dp))
