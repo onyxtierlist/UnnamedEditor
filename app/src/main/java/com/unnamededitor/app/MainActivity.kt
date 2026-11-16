@@ -228,7 +228,7 @@ private fun UnnamedEditor() {
                         onExport = { page = "Export" },
                         previewX = previewX, previewY = previewY, timelineOffsetMs = timelineOffsetMs, trimStartMs = trimStartMs, trimEndMs = trimEndMs, editorCategory = editorCategory, onCategory = { editorCategory = it },
                         onPreviewX = { previewX = it }, onPreviewY = { previewY = it }, onTimelineOffset = { timelineOffsetMs = it },
-                        onTrimStart = { pushUndo(); trimStartMs = it.coerceAtLeast(0L); notice = "Trim start set to " + formatTime(it) }, onTrimEnd = { pushUndo(); trimEndMs = it.coerceAtLeast(trimStartMs); notice = "Trim end set to " + formatTime(it) }
+                        onTrimStart = { trimStartMs = it.coerceAtLeast(0L); notice = "Trim start updated" }, onTrimEnd = { trimEndMs = it.coerceAtLeast(trimStartMs); notice = "Trim end updated" }
                     )
                     "Effects" -> EffectsScreen(activeEffects, onToggle = {
                         pushUndo()
@@ -568,9 +568,9 @@ private fun EditorScreen(
                         EditorTool("Split", Icons.Outlined.ContentCut, Modifier.width(66.dp), onSplit)
                         EditorTool("Delete", Icons.Outlined.DeleteOutline, Modifier.width(66.dp), onDelete)
                         EditorTool("Speed", Icons.Outlined.Speed, Modifier.width(66.dp), onSpeed)
-                        EditorTool("Set start", Icons.Outlined.ContentCut, Modifier.width(78.dp)) { onTrimStart(playheadMs) }
-                        EditorTool("Set end", Icons.Outlined.ContentCut, Modifier.width(72.dp)) { onTrimEnd(playheadMs) }
-                        EditorTool("Reset trim", Icons.Outlined.ContentCut, Modifier.width(82.dp)) { onTrimStart(0L); onTrimEnd(0L) }
+                        EditorTool("Set start", Icons.Outlined.ContentCut, Modifier.width(78.dp)) { pushUndo(); onTrimStart(playheadMs) }
+                        EditorTool("Set end", Icons.Outlined.ContentCut, Modifier.width(72.dp)) { pushUndo(); onTrimEnd(playheadMs) }
+                        EditorTool("Reset trim", Icons.Outlined.ContentCut, Modifier.width(82.dp)) { pushUndo(); onTrimStart(0L); onTrimEnd(0L) }
                     }
                     "Audio" -> {
                         EditorTool("Add audio", Icons.Outlined.FileUpload, Modifier.width(82.dp), onAddLayer)
