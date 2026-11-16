@@ -373,7 +373,7 @@ private fun EditorScreen(
     onPreviewX: (Float) -> Unit, onPreviewY: (Float) -> Unit, onTimelineOffset: (Long) -> Unit, onTrimStart: (Long) -> Unit, onTrimEnd: (Long) -> Unit,
     onBack: () -> Unit, onImport: () -> Unit,
     onPlay: () -> Unit, onPosition: (Long) -> Unit, onDuration: (Long) -> Unit, onSeek: (Long) -> Unit,
-    onSelectClip: (Int) -> Unit, onSplit: () -> Unit, onDelete: () -> Unit,
+    onSelectClip: (Int) -> Unit, canUndo: Boolean, canRedo: Boolean, onUndo: () -> Unit, onRedo: () -> Unit, onSplit: () -> Unit, onDelete: () -> Unit,
     onSpeed: () -> Unit, onAddLayer: () -> Unit, onEffects: () -> Unit, onNodes: () -> Unit, onExport: () -> Unit
 ) {
     val videoView = remember { mutableStateOf<VideoView?>(null) }
