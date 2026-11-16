@@ -116,6 +116,25 @@ private fun UnnamedEditor() {
     var newName by remember { mutableStateOf("My first edit") }
     var showAddLayer by remember { mutableStateOf(false) }
     var clips by remember { mutableStateOf(loadSavedClips()) }
+    var undoHistory by remember { mutableStateOf(emptyList<EditorSnapshot>()) }
+    var redoHistory by remember { mutableStateOf(emptyList<EditorSnapshot>()) }
+    val makeSnapshot = { EditorSnapshot(clips.toList(), activeEffects.toSet(), speed, trimStartMs, trimEndMs, previewX, previewY) }
+    fun pushUndo() { undoHistory = (undoHistory + makeSnapshot()).takeLast(50); redoHistory = emptyList() }
+    fun restoreSnapshot(snapshot: EditorSnapshot) {
+        clips = snapshot.clips; activeEffects = snapshot.effects; speed = snapshot.speed
+        trimStartMs = snapshot.trimStartMs; trimEndMs = snapshot.trimEndMs
+        previewX = snapshot.previewX; previewY = snapshot.previewY
+    }
+    fun undoEdit() {
+        val previous = undoHistory.lastOrNull() ?: return
+        redoHistory = (redoHistory + makeSnapshot()).takeLast(50)
+        undoHistory = undoHistory.dropLast(1); restoreSnapshot(previous); notice = "Undo complete"
+    }
+    fun redoEdit() {
+        val next = redoHistory.lastOrNull() ?: return
+        undoHistory = (undoHistory + makeSnapshot()).takeLast(50)
+        redoHistory = redoHistory.dropLast(1); restoreSnapshot(next); notice = "Redo complete"
+    }
     var nodes by remember { mutableStateOf(listOf(
         NodeItem(1, "Media Input", "Source"),
         NodeItem(2, "Color Grade", "Adjust"),
@@ -145,6 +164,7 @@ private fun UnnamedEditor() {
     }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
+            pushUndo()
             videoUri = uri
             runCatching { context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) }
             videoName = uri.lastPathSegment?.substringAfterLast('/') ?: "Imported video"
@@ -182,7 +202,10 @@ private fun UnnamedEditor() {
                         onDuration = { durationMs = it },
                         onSeek = { playheadMs = it },
                         onSelectClip = { selectedClip = it },
+                        canUndo = undoHistory.isNotEmpty(), canRedo = redoHistory.isNotEmpty(),
+                        onUndo = { undoEdit() }, onRedo = { redoEdit() },
                         onSplit = {
+                            pushUndo()
                             val chosen = clips.firstOrNull { it.id == selectedClip }
                             if (chosen != null) {
                                 clips = clips.flatMap { if (it.id == selectedClip) listOf(it.copy(title = it.title + " A"), it.copy(id = nextId++, title = it.title + " B")) else listOf(it) }
@@ -191,11 +214,14 @@ private fun UnnamedEditor() {
                             } else notice = "Select a clip to split"
                         },
                         onDelete = {
+                            if (clips.none { it.id == selectedClip }) { notice = "Select a clip first" } else {
+                            pushUndo()
                             clips = clips.filterNot { it.id == selectedClip }
                             selectedClip = clips.firstOrNull()?.id ?: -1
                             notice = "Selected layer removed"
+                            }
                         },
-                        onSpeed = { speed = if (speed == "1.0×") "1.5×" else if (speed == "1.5×") "2.0×" else "1.0×"; notice = "Preview speed set to " + speed },
+                        onSpeed = { pushUndo(); speed = if (speed == "1.0×") "1.5×" else if (speed == "1.5×") "2.0×" else "1.0×"; notice = "Preview speed set to " + speed },
                         onAddLayer = { showAddLayer = true },
                         onEffects = { page = "Effects" },
                         onNodes = { page = "Nodes" },
@@ -205,6 +231,7 @@ private fun UnnamedEditor() {
                         onTrimStart = { trimStartMs = it }, onTrimEnd = { trimEndMs = it }
                     )
                     "Effects" -> EffectsScreen(activeEffects, onToggle = {
+                        pushUndo()
                         activeEffects = if (activeEffects.contains(it)) activeEffects - it else activeEffects + it
                         notice = if (activeEffects.contains(it)) it + " enabled" else it + " removed"
                     }, onBack = { page = "Editor" })
@@ -249,6 +276,7 @@ private fun UnnamedEditor() {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("VIDEO", "AUDIO", "TEXT", "FX").forEach { kind ->
                         OutlinedButton(onClick = {
+                            pushUndo()
                             val tint = when (kind) { "VIDEO" -> Color(0xFF526BC2); "AUDIO" -> Color(0xFF4D9974); "TEXT" -> Color(0xFF9A8B58); else -> Color(0xFFB7774E) }
                             clips = clips + ClipItem(nextId++, kind.lowercase().replaceFirstChar { it.uppercase() } + " layer", kind, tint)
                             showAddLayer = false
@@ -433,6 +461,8 @@ private fun EditorScreen(
         ) {
             Text(formatTime(playheadMs), color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
             Text(" / " + formatTime(durationMs), color = Color(0xFF85898D), fontSize = 11.sp, modifier = Modifier.weight(1f))
+            IconButton(onClick = onUndo, enabled = canUndo, modifier = Modifier.size(34.dp)) { Icon(Icons.Outlined.Undo, contentDescription = "Undo", tint = if (canUndo) Color.White else Color(0xFF555A5D), modifier = Modifier.size(19.dp)) }
+            IconButton(onClick = onRedo, enabled = canRedo, modifier = Modifier.size(34.dp)) { Icon(Icons.Outlined.Redo, contentDescription = "Redo", tint = if (canRedo) Color.White else Color(0xFF555A5D), modifier = Modifier.size(19.dp)) }
             IconButton(onClick = onPlay, modifier = Modifier.size(38.dp)) {
                 Icon(if (playing) Icons.Outlined.Pause else Icons.Outlined.PlayArrow, contentDescription = if (playing) "Pause" else "Play", tint = Color.White, modifier = Modifier.size(26.dp))
             }
