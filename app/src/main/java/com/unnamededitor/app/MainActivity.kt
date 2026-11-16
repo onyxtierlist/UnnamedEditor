@@ -118,23 +118,6 @@ private fun UnnamedEditor() {
     var clips by remember { mutableStateOf(loadSavedClips()) }
     var undoHistory by remember { mutableStateOf(emptyList<EditorSnapshot>()) }
     var redoHistory by remember { mutableStateOf(emptyList<EditorSnapshot>()) }
-    val makeSnapshot = { EditorSnapshot(clips.toList(), activeEffects.toSet(), speed, trimStartMs, trimEndMs, previewX, previewY) }
-    fun pushUndo() { undoHistory = (undoHistory + makeSnapshot()).takeLast(50); redoHistory = emptyList() }
-    fun restoreSnapshot(snapshot: EditorSnapshot) {
-        clips = snapshot.clips; activeEffects = snapshot.effects; speed = snapshot.speed
-        trimStartMs = snapshot.trimStartMs; trimEndMs = snapshot.trimEndMs
-        previewX = snapshot.previewX; previewY = snapshot.previewY
-    }
-    fun undoEdit() {
-        val previous = undoHistory.lastOrNull() ?: return
-        redoHistory = (redoHistory + makeSnapshot()).takeLast(50)
-        undoHistory = undoHistory.dropLast(1); restoreSnapshot(previous); notice = "Undo complete"
-    }
-    fun redoEdit() {
-        val next = redoHistory.lastOrNull() ?: return
-        undoHistory = (undoHistory + makeSnapshot()).takeLast(50)
-        redoHistory = redoHistory.dropLast(1); restoreSnapshot(next); notice = "Redo complete"
-    }
     var nodes by remember { mutableStateOf(listOf(
         NodeItem(1, "Media Input", "Source"),
         NodeItem(2, "Color Grade", "Adjust"),
@@ -156,6 +139,23 @@ private fun UnnamedEditor() {
     var exportMessage by remember { mutableStateOf("Ready to export") }
     var exporting by remember { mutableStateOf(false) }
     var editorCategory by remember { mutableStateOf("Edit") }
+    val makeSnapshot = { EditorSnapshot(clips.toList(), activeEffects.toSet(), speed, trimStartMs, trimEndMs, previewX, previewY) }
+    fun pushUndo() { undoHistory = (undoHistory + makeSnapshot()).takeLast(50); redoHistory = emptyList() }
+    fun restoreSnapshot(snapshot: EditorSnapshot) {
+        clips = snapshot.clips; activeEffects = snapshot.effects; speed = snapshot.speed
+        trimStartMs = snapshot.trimStartMs; trimEndMs = snapshot.trimEndMs
+        previewX = snapshot.previewX; previewY = snapshot.previewY
+    }
+    fun undoEdit() {
+        val previous = undoHistory.lastOrNull() ?: return
+        redoHistory = (redoHistory + makeSnapshot()).takeLast(50)
+        undoHistory = undoHistory.dropLast(1); restoreSnapshot(previous); notice = "Undo complete"
+    }
+    fun redoEdit() {
+        val next = redoHistory.lastOrNull() ?: return
+        undoHistory = (undoHistory + makeSnapshot()).takeLast(50)
+        redoHistory = redoHistory.dropLast(1); restoreSnapshot(next); notice = "Redo complete"
+    }
     val context = LocalContext.current
     LaunchedEffect(projectName, videoUri, videoName, clips, activeEffects, resolution, frameRate, quality, previewX, previewY, timelineOffsetMs, trimStartMs, trimEndMs) {
         saveEditorState(context, projectName, videoUri, videoName, clips, activeEffects, resolution, frameRate, quality)
