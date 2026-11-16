@@ -228,7 +228,7 @@ private fun UnnamedEditor() {
                         onExport = { page = "Export" },
                         previewX = previewX, previewY = previewY, timelineOffsetMs = timelineOffsetMs, trimStartMs = trimStartMs, trimEndMs = trimEndMs, editorCategory = editorCategory, onCategory = { editorCategory = it },
                         onPreviewX = { previewX = it }, onPreviewY = { previewY = it }, onTimelineOffset = { timelineOffsetMs = it },
-                        onTrimStart = { trimStartMs = it }, onTrimEnd = { trimEndMs = it }
+                        onTrimStart = { pushUndo(); trimStartMs = it.coerceAtLeast(0L); notice = "Trim start set to " + formatTime(it) }, onTrimEnd = { pushUndo(); trimEndMs = it.coerceAtLeast(trimStartMs); notice = "Trim end set to " + formatTime(it) }
                     )
                     "Effects" -> EffectsScreen(activeEffects, onToggle = {
                         pushUndo()
@@ -568,16 +568,17 @@ private fun EditorScreen(
                         EditorTool("Split", Icons.Outlined.ContentCut, Modifier.width(66.dp), onSplit)
                         EditorTool("Delete", Icons.Outlined.DeleteOutline, Modifier.width(66.dp), onDelete)
                         EditorTool("Speed", Icons.Outlined.Speed, Modifier.width(66.dp), onSpeed)
-                        EditorTool("Adjust", Icons.Outlined.AutoFixHigh, Modifier.width(66.dp)) { onCategory("Adjust") }
+                        EditorTool("Set start", Icons.Outlined.ContentCut, Modifier.width(78.dp)) { onTrimStart(playheadMs) }
+                        EditorTool("Set end", Icons.Outlined.ContentCut, Modifier.width(72.dp)) { onTrimEnd(playheadMs) }
+                        EditorTool("Reset trim", Icons.Outlined.ContentCut, Modifier.width(82.dp)) { onTrimStart(0L); onTrimEnd(0L) }
                     }
                     "Audio" -> {
                         EditorTool("Add audio", Icons.Outlined.FileUpload, Modifier.width(82.dp), onAddLayer)
-                        EditorTool("Extract", Icons.Outlined.Speed, Modifier.width(72.dp), onAddLayer)
-                        EditorTool("Volume", Icons.Outlined.AutoFixHigh, Modifier.width(72.dp), onAddLayer)
+
                     }
                     "Text" -> {
                         EditorTool("Add text", Icons.Outlined.AutoFixHigh, Modifier.width(76.dp), onAddLayer)
-                        EditorTool("Captions", Icons.Outlined.FileUpload, Modifier.width(76.dp), onAddLayer)
+                        EditorTool("Text layer", Icons.Outlined.FileUpload, Modifier.width(76.dp), onAddLayer)
                     }
                     "Stickers" -> EditorTool("Add sticker", Icons.Outlined.AutoFixHigh, Modifier.width(90.dp), onAddLayer)
                     "Overlay" -> EditorTool("Add overlay", Icons.Outlined.FileUpload, Modifier.width(90.dp), onAddLayer)
