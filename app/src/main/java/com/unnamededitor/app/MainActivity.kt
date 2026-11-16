@@ -44,6 +44,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
+import org.json.JSONArray
+import org.json.JSONObject
 import androidx.compose.ui.viewinterop.AndroidView
 
 private val ink = Color(0xFF080D1A)
@@ -63,18 +65,40 @@ private data class NodeItem(val id: Int, val title: String, val detail: String)
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        AppContextHolder.context = applicationContext
         window.statusBarColor = android.graphics.Color.rgb(8, 11, 19)
         window.navigationBarColor = android.graphics.Color.rgb(8, 11, 19)
         setContent { UnnamedEditor() }
     }
 }
 
+
+private fun contextPrefs(key: String, fallback: String): String = appPrefs().getString(key, fallback) ?: fallback
+private fun contextPrefsName(): String = contextPrefs("projectName", "Untitled Project")
+private fun contextPrefsUri(): Uri? = appPrefs().getString("videoUri", null)?.let { runCatching { Uri.parse(it) }.getOrNull() }
+private fun contextPrefsVideoName(): String = contextPrefs("videoName", "No media imported")
+private fun appPrefs() = androidx.preference.PreferenceManager.getDefaultSharedPreferences(AppContextHolder.context)
+private fun loadSavedClips(): List<ClipItem> = runCatching {
+    val arr = JSONArray(appPrefs().getString("clips", "[]"))
+    (0 until arr.length()).map { i -> arr.getJSONObject(i).let { ClipItem(it.getInt("id"), it.getString("title"), it.getString("kind"), Color(it.getLong("tint").toLong())) } }
+}.getOrElse { emptyList() }
+private fun loadSavedEffects(): Set<String> = runCatching {
+    val arr = JSONArray(appPrefs().getString("effects", "[]")); (0 until arr.length()).map { arr.getString(it) }.toSet()
+}.getOrElse { emptySet() }
+private fun saveEditorState(context: android.content.Context, project: String, uri: Uri?, video: String, clips: List<ClipItem>, effects: Set<String>, resolution: String, fps: String, quality: String) {
+    AppContextHolder.context = context.applicationContext
+    val clipArray = JSONArray().apply { clips.forEach { put(JSONObject().put("id", it.id).put("title", it.title).put("kind", it.kind).put("tint", it.tint.value.toLong())) } }
+    val effectArray = JSONArray().apply { effects.forEach { put(it) } }
+    appPrefs().edit().putString("projectName", project).putString("videoUri", uri?.toString()).putString("videoName", video).putString("clips", clipArray.toString()).putString("effects", effectArray.toString()).putString("resolution", resolution).putString("frameRate", fps).putString("quality", quality).apply()
+}
+private object AppContextHolder { lateinit var context: android.content.Context }
+
 @Composable
 private fun UnnamedEditor() {
     var page by remember { mutableStateOf("Home") }
-    var projectName by remember { mutableStateOf("Untitled Project") }
-    var videoUri by remember { mutableStateOf<Uri?>(null) }
-    var videoName by remember { mutableStateOf("No media imported") }
+    var projectName by remember { mutableStateOf(contextPrefsName()) }
+    var videoUri by remember { mutableStateOf(contextPrefsUri()) } }
+    var videoName by remember { mutableStateOf(contextPrefsVideoName()) }
     var playing by remember { mutableStateOf(false) }
     var playheadMs by remember { mutableLongStateOf(0L) }
     var durationMs by remember { mutableLongStateOf(0L) }
@@ -84,28 +108,25 @@ private fun UnnamedEditor() {
     var showNewProject by remember { mutableStateOf(false) }
     var newName by remember { mutableStateOf("My first edit") }
     var showAddLayer by remember { mutableStateOf(false) }
-    var clips by remember { mutableStateOf(listOf(
-        ClipItem(1, "Video 01", "VIDEO", Color(0xFF526BC2)),
-        ClipItem(2, "Audio track", "AUDIO", Color(0xFF238E91)),
-        ClipItem(3, "Title layer", "TEXT", Color(0xFF9866C8)),
-        ClipItem(4, "Effects", "FX", Color(0xFFB47754))
-    )) }
+    var clips by remember { mutableStateOf(loadSavedClips()) }
     var nodes by remember { mutableStateOf(listOf(
         NodeItem(1, "Media Input", "Source"),
         NodeItem(2, "Color Grade", "Adjust"),
         NodeItem(3, "Glow", "Stylize"),
         NodeItem(4, "Composite", "Output")
     )) }
-    var activeEffects by remember { mutableStateOf(setOf<String>()) }
-    var resolution by remember { mutableStateOf("1080p") }
-    var frameRate by remember { mutableStateOf("30 FPS") }
-    var quality by remember { mutableStateOf("High") }
+    var activeEffects by remember { mutableStateOf(loadSavedEffects()) } }
+    var resolution by remember { mutableStateOf(contextPrefs("resolution", "1080p")) }
+    var frameRate by remember { mutableStateOf(contextPrefs("frameRate", "30 FPS")) }
+    var quality by remember { mutableStateOf(contextPrefs("quality", "High")) }
     var speed by remember { mutableStateOf("1.0×") }
     var showExportInfo by remember { mutableStateOf(false) }
     val context = LocalContext.current
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+    LaunchedEffect(projectName, videoUri, videoName, clips, activeEffects, resolution, frameRate, quality) { saveEditorState(context, projectName, videoUri, videoName, clips, activeEffects, resolution, frameRate, quality) }
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
             videoUri = uri
+            runCatching { context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) }
             videoName = uri.lastPathSegment?.substringAfterLast('/') ?: "Imported video"
             playing = false
             if (clips.none { it.kind == "VIDEO" }) clips = clips + ClipItem(nextId++, videoName, "VIDEO", Color(0xFF526BC2))
@@ -126,7 +147,7 @@ private fun UnnamedEditor() {
                         projectName = projectName,
                         onNew = { showNewProject = true },
                         onOpen = { page = "Editor" },
-                        onImport = { picker.launch("video/*") },
+                        onImport = { picker.launch(arrayOf("video/*")) },
                         onEffects = { page = "Effects" }
                     )
                     "Editor" -> EditorScreen(
@@ -183,7 +204,7 @@ private fun UnnamedEditor() {
             onDismissRequest = { showNewProject = false },
             title = { Text("Create project", color = textMain) },
             text = { OutlinedTextField(value = newName, onValueChange = { newName = it }, label = { Text("Project name") }, singleLine = true) },
-            confirmButton = { TextButton(onClick = { projectName = newName.ifBlank { "Untitled Project" }; clips = emptyList(); videoUri = null; videoName = "No media imported"; page = "Editor"; showNewProject = false }) { Text("Create") } },
+            confirmButton = { TextButton(onClick = { projectName = newName.ifBlank { "Untitled Project" }; clips = emptyList(); activeEffects = emptySet(); videoUri = null; videoName = "No media imported"; page = "Editor"; showNewProject = false }) { Text("Create") } },
             dismissButton = { TextButton(onClick = { showNewProject = false }) { Text("Cancel") } },
             containerColor = surface
         )
