@@ -459,8 +459,6 @@ private fun EditorScreen(
             Text(" / " + formatTime(durationMs), color = Color(0xFF85898D), fontSize = 11.sp, modifier = Modifier.weight(1f))
             IconButton(onClick = onUndo, enabled = canUndo, modifier = Modifier.size(34.dp)) { Icon(Icons.Outlined.Undo, contentDescription = "Undo", tint = if (canUndo) Color.White else Color(0xFF555A5D), modifier = Modifier.size(19.dp)) }
             IconButton(onClick = onRedo, enabled = canRedo, modifier = Modifier.size(34.dp)) { Icon(Icons.Outlined.Redo, contentDescription = "Redo", tint = if (canRedo) Color.White else Color(0xFF555A5D), modifier = Modifier.size(19.dp)) }
-            IconButton(onClick = onUndo, enabled = canUndo, modifier = Modifier.size(34.dp)) { Icon(Icons.Outlined.Undo, contentDescription = "Undo", tint = if (canUndo) Color.White else Color(0xFF555A5D), modifier = Modifier.size(19.dp)) }
-            IconButton(onClick = onRedo, enabled = canRedo, modifier = Modifier.size(34.dp)) { Icon(Icons.Outlined.Redo, contentDescription = "Redo", tint = if (canRedo) Color.White else Color(0xFF555A5D), modifier = Modifier.size(19.dp)) }
             IconButton(onClick = onPlay, modifier = Modifier.size(38.dp)) {
                 Icon(if (playing) Icons.Outlined.Pause else Icons.Outlined.PlayArrow, contentDescription = if (playing) "Pause" else "Play", tint = Color.White, modifier = Modifier.size(26.dp))
             }
