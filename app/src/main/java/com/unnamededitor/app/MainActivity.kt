@@ -153,7 +153,7 @@ private fun UnnamedEditor() {
                     "Editor" -> EditorScreen(
                         projectName, videoUri, videoName, playing, clips, selectedClip, speed, notice, playheadMs, durationMs,
                         onBack = { page = "Home" },
-                        onImport = { picker.launch("video/*") },
+                        onImport = { picker.launch(arrayOf("video/*")) },
                         onPlay = {
                             playing = !playing
                             notice = if (playing) "Playback paused" else "Playback started"
