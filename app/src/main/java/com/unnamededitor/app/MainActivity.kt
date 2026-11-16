@@ -440,7 +440,7 @@ private fun EditorScreen(
                     Box(Modifier.weight(1f).height(31.dp).clip(RoundedCornerShape(8.dp))
                         .background(clip.tint.copy(alpha = if (selectedClip == clip.id) 1f else .55f))
                         .then(if (selectedClip == clip.id) Modifier.border(1.dp, Color.White, RoundedCornerShape(8.dp)) else Modifier)
-                        .clickable { onSelectClip(clip.id) }.offset(x = if (selectedClip == clip.id) (timelineOffsetMs / 100L).coerceAtMost(120L).dp else 0.dp).padding(horizontal = 9.dp), contentAlignment = Alignment.CenterStart) {
+                        .clickable { onSelectClip(clip.id) }.offset(x = if (selectedClip == clip.id) (timelineOffsetMs / 100L).toInt().coerceAtMost(120).dp else 0.dp).padding(horizontal = 9.dp), contentAlignment = Alignment.CenterStart) {
                         Text(clip.title, color = Color.White, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
