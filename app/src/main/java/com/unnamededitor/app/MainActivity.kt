@@ -257,8 +257,11 @@ private fun UnnamedEditor() {
     if (showExportInfo) {
         AlertDialog(
             onDismissRequest = { showExportInfo = false },
-            title = { Text("Export engine not connected yet", color = textMain) },
-            text = { Text("Your export settings are saved in this session, but rendering the edited timeline into a video file still needs the media-processing engine. I won't show a fake export-complete message.", color = textDim) },
+            title = { Text(if (exporting) "Exporting video…" else "Export status", color = textMain) },
+            text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(exportMessage, color = textDim)
+                if (exporting) LinearProgressIndicator(progress = { exportProgress / 100f }, modifier = Modifier.fillMaxWidth())
+            } },
             confirmButton = { TextButton(onClick = { showExportInfo = false }) { Text("Got it") } },
             containerColor = surface
         )
@@ -437,7 +440,7 @@ private fun EditorScreen(
                     Box(Modifier.weight(1f).height(31.dp).clip(RoundedCornerShape(8.dp))
                         .background(clip.tint.copy(alpha = if (selectedClip == clip.id) 1f else .55f))
                         .then(if (selectedClip == clip.id) Modifier.border(1.dp, Color.White, RoundedCornerShape(8.dp)) else Modifier)
-                        .clickable { onSelectClip(clip.id) }.padding(horizontal = 9.dp), contentAlignment = Alignment.CenterStart) {
+                        .clickable { onSelectClip(clip.id) }.offset(x = if (selectedClip == clip.id) (timelineOffsetMs / 100L).coerceAtMost(120L).dp else 0.dp).padding(horizontal = 9.dp), contentAlignment = Alignment.CenterStart) {
                         Text(clip.title, color = Color.White, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
