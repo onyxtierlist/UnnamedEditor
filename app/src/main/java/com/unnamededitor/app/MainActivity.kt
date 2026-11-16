@@ -404,10 +404,6 @@ private fun EditorScreen(
                 Text(project, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text("Saved locally", color = Color(0xFF92969B), fontSize = 9.sp)
             }
-            Surface(onClick = onExport, color = Color(0xFF25282B), shape = RoundedCornerShape(7.dp)) {
-                Text("1080P  ⌄", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp))
-            }
-            Spacer(Modifier.width(8.dp))
             Surface(onClick = onExport, color = Color(0xFFB7F36B), shape = RoundedCornerShape(7.dp)) {
                 Text("Export", color = Color(0xFF10120F), fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 15.dp, vertical = 9.dp))
             }
@@ -701,7 +697,7 @@ private fun ExportScreen(resolution: String, frameRate: String, quality: String,
         Spacer(Modifier.height(18.dp))
         Text("VIDEO OUTPUT", color = Color(0xFFB7F36B), fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.3.sp)
         SettingRow("Resolution", resolution, listOf("720p", "1080p", "1440p", "4K"), onResolution)
-        SettingRow("Frame rate", frameRate, listOf("Source FPS"), onFrameRate)
+        SettingRow("Frame rate", "Source FPS", listOf("Source FPS"), onFrameRate)
         SettingRow("Quality", quality, listOf("Standard", "High", "Maximum"), onQuality)
         Spacer(Modifier.height(10.dp))
         Surface(shape = RoundedCornerShape(14.dp), color = Color(0xFF151916)) {
@@ -778,10 +774,10 @@ private fun formatTime(ms: Long): String {
 @Composable
 private fun PrimaryButton(label: String, onClick: () -> Unit) {
     Surface(onClick = onClick, modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(18.dp), color = violet, shadowElevation = 6.dp) {
-        Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Color(0xFF7769D8), Color(0xFF368F9D)))), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(Color(0xFFB7F36B), Color(0xFF8FCB48)))), contentAlignment = Alignment.Center) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(label, color = Color.White, fontSize = 13.sp, letterSpacing = .3.sp, fontWeight = FontWeight.Bold)
-                Text("  ↗", color = Color.White.copy(alpha = .85f), fontSize = 15.sp)
+                Text(label, color = Color(0xFF10120F), fontSize = 13.sp, letterSpacing = .3.sp, fontWeight = FontWeight.Bold)
+                Text("  ↗", color = Color(0xFF10120F).copy(alpha = .85f), fontSize = 15.sp)
             }
         }
     }
