@@ -344,6 +344,7 @@ private fun EditorScreen(
     onSpeed: () -> Unit, onAddLayer: () -> Unit, onEffects: () -> Unit, onNodes: () -> Unit, onExport: () -> Unit
 ) {
     val videoView = remember { mutableStateOf<VideoView?>(null) }
+    val timelineScroll = rememberScrollState()
     LaunchedEffect(playing, videoUri) {
         val view = videoView.value
         if (view != null && videoUri != null) {
@@ -356,158 +357,216 @@ private fun EditorScreen(
             delay(200)
         }
     }
-    Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-        Spacer(Modifier.height(12.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            ToolText("‹", onBack, 30)
-            Column(Modifier.weight(1f).padding(start = 10.dp)) {
-                Text(project, color = textMain, fontWeight = FontWeight.Bold, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text("EDITING WORKSPACE", color = textDim, fontSize = 9.sp, letterSpacing = 1.2.sp)
+    val categories = listOf("Edit", "Audio", "Text", "Stickers", "Overlay", "Effects", "Filters", "Adjust")
+    Column(Modifier.fillMaxSize().background(Color(0xFF090A0B))) {
+        // CapCut-style compact project bar.
+        Row(
+            Modifier.fillMaxWidth().height(52.dp).padding(horizontal = 13.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack, modifier = Modifier.size(38.dp)) {
+                Icon(Icons.Outlined.ArrowBack, contentDescription = "Back", tint = Color.White)
             }
-            ToolPill("1080p", onExport)
-            Spacer(Modifier.width(7.dp))
-            ToolPill("Export ↗", onExport, true)
+            Column(Modifier.weight(1f).padding(start = 5.dp)) {
+                Text(project, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("Saved locally", color = Color(0xFF92969B), fontSize = 9.sp)
+            }
+            Surface(onClick = onExport, color = Color(0xFF25282B), shape = RoundedCornerShape(7.dp)) {
+                Text("1080P  ⌄", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp))
+            }
+            Spacer(Modifier.width(8.dp))
+            Surface(onClick = onExport, color = Color(0xFFB7F36B), shape = RoundedCornerShape(7.dp)) {
+                Text("Export", color = Color(0xFF10120F), fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 15.dp, vertical = 9.dp))
+            }
         }
-        Spacer(Modifier.height(14.dp))
-        Box(Modifier.fillMaxWidth().weight(1f).clip(RoundedCornerShape(22.dp)).background(Brush.linearGradient(listOf(Color(0xFF242A20), Color(0xFF11140F)))).border(1.dp, line, RoundedCornerShape(22.dp)), contentAlignment = Alignment.Center) {
+
+        // Preview takes the main upper area, like the mobile editing workspace.
+        Box(
+            Modifier.fillMaxWidth().weight(1f).padding(horizontal = 30.dp, vertical = 7.dp)
+                .clip(RoundedCornerShape(5.dp)).background(Color(0xFF17191B)),
+            contentAlignment = Alignment.Center
+        ) {
             if (videoUri != null) {
-                AndroidView(factory = { ctx ->
-                    VideoView(ctx).apply {
-                        setVideoURI(videoUri)
-                        setOnPreparedListener { mp ->
-                            mp.isLooping = true
-                            val rate = speed.removeSuffix("×").toFloatOrNull() ?: 1f
-                            mp.setPlaybackParams(android.media.PlaybackParams().setSpeed(rate))
-                            onDuration(mp.duration.toLong())
-                            if (playing) start()
+                AndroidView(
+                    factory = { ctx ->
+                        VideoView(ctx).apply {
+                            setVideoURI(videoUri)
+                            setOnPreparedListener { mp ->
+                                mp.isLooping = true
+                                val rate = speed.removeSuffix("×").toFloatOrNull() ?: 1f
+                                mp.setPlaybackParams(android.media.PlaybackParams().setSpeed(rate))
+                                onDuration(mp.duration.toLong())
+                                if (playing) start()
+                            }
+                            videoView.value = this
                         }
-                        videoView.value = this
-                    }
-                }, update = { view ->
-                    if (view.tag != videoUri.toString()) {
-                        view.tag = videoUri.toString()
-                        view.setVideoURI(videoUri)
-                    }
-                }, modifier = Modifier.fillMaxSize().offset { IntOffset(previewX.dp.roundToPx(), previewY.dp.roundToPx()) })
+                    },
+                    update = { view ->
+                        if (view.tag != videoUri.toString()) {
+                            view.tag = videoUri.toString()
+                            view.setVideoURI(videoUri)
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize().offset { IntOffset(previewX.dp.roundToPx(), previewY.dp.roundToPx()) }
+                )
             } else {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(Modifier.size(66.dp).clip(CircleShape).background(surface2), contentAlignment = Alignment.Center) { Text("▶", color = violet, fontSize = 26.sp) }
-                    Spacer(Modifier.height(12.dp))
-                    Text("Your preview lives here", color = textMain, fontWeight = FontWeight.SemiBold)
-                    Text("Import a video to start editing", color = textDim, fontSize = 11.sp)
-                    Spacer(Modifier.height(14.dp))
-                    Button(onClick = onImport, colors = ButtonDefaults.buttonColors(containerColor = violet)) { Text("＋ Import media") }
+                    Icon(Icons.Outlined.FileUpload, contentDescription = null, tint = Color(0xFFB7F36B), modifier = Modifier.size(32.dp))
+                    Spacer(Modifier.height(9.dp))
+                    Text("Preview", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Add a video to start your edit", color = Color(0xFF92969B), fontSize = 10.sp)
+                    Spacer(Modifier.height(10.dp))
+                    Text("＋  Add video", color = Color(0xFFB7F36B), fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clickable { onImport() }.padding(8.dp))
                 }
             }
         }
-        if (videoUri != null) {
-            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(surface2).padding(horizontal = 10.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("X", color = cyan, fontSize = 10.sp, modifier = Modifier.width(18.dp))
-                Slider(value = previewX.coerceIn(-140f, 140f), onValueChange = onPreviewX, valueRange = -140f..140f, modifier = Modifier.weight(1f).height(28.dp))
-                Text("Y", color = cyan, fontSize = 10.sp, modifier = Modifier.width(18.dp))
-                Slider(value = previewY.coerceIn(-90f, 90f), onValueChange = onPreviewY, valueRange = -90f..90f, modifier = Modifier.weight(1f).height(28.dp))
+
+        // Playback controls and timecode.
+        Row(
+            Modifier.fillMaxWidth().height(43.dp).padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(formatTime(playheadMs), color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+            Text(" / " + formatTime(durationMs), color = Color(0xFF85898D), fontSize = 11.sp, modifier = Modifier.weight(1f))
+            IconButton(onClick = onPlay, modifier = Modifier.size(38.dp)) {
+                Icon(if (playing) Icons.Outlined.Pause else Icons.Outlined.PlayArrow, contentDescription = if (playing) "Pause" else "Play", tint = Color.White, modifier = Modifier.size(26.dp))
+            }
+            Text("↶", color = Color(0xFFB8BBC0), fontSize = 22.sp, modifier = Modifier.padding(horizontal = 10.dp))
+            Text("↷", color = Color(0xFFB8BBC0), fontSize = 22.sp)
+            IconButton(onClick = onImport, modifier = Modifier.size(36.dp)) {
+                Icon(Icons.Outlined.FileUpload, contentDescription = "Import media", tint = Color(0xFFB8BBC0), modifier = Modifier.size(18.dp))
             }
         }
-        Spacer(Modifier.height(12.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(formatTime(playheadMs), color = textMain, fontSize = 12.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
-            Surface(onClick = onPlay, modifier = Modifier.size(46.dp), shape = CircleShape, color = violet) { Box(contentAlignment = Alignment.Center) { Icon(if (playing) Icons.Outlined.Pause else Icons.Outlined.PlayArrow, contentDescription = if (playing) "Pause" else "Play", tint = Color.White) } }
-            Text(formatTime(durationMs), color = textDim, fontSize = 12.sp, modifier = Modifier.weight(1f), textAlign = androidx.compose.ui.text.style.TextAlign.End)
-        }
+
         if (durationMs > 0L) {
-            Slider(value = playheadMs.coerceIn(0L, durationMs).toFloat(), onValueChange = { onSeek(it.toLong()); videoView.value?.seekTo(it.toInt()) }, valueRange = 0f..durationMs.toFloat(), colors = SliderDefaults.colors(thumbColor = cyan, activeTrackColor = violet, inactiveTrackColor = line), modifier = Modifier.fillMaxWidth().height(24.dp))
+            Slider(
+                value = playheadMs.coerceIn(0L, durationMs).toFloat(),
+                onValueChange = { onSeek(it.toLong()); videoView.value?.seekTo(it.toInt()) },
+                valueRange = 0f..durationMs.toFloat(),
+                colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFFB7F36B), inactiveTrackColor = Color(0xFF3C4044)),
+                modifier = Modifier.fillMaxWidth().height(17.dp).padding(horizontal = 12.dp)
+            )
         }
-        Spacer(Modifier.height(8.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("TIMELINE", color = textMain, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, modifier = Modifier.weight(1f))
-            Text(notice, color = cyan, fontSize = 9.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Spacer(Modifier.width(8.dp))
-            ToolPill("＋ Layer", onAddLayer)
-        }
-        Spacer(Modifier.height(8.dp))
-        Column(Modifier.fillMaxWidth().heightIn(min = 142.dp, max = 205.dp).clip(RoundedCornerShape(16.dp)).background(glassGradient).border(1.dp, line, RoundedCornerShape(16.dp)).padding(10.dp).verticalScroll(rememberScrollState())) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("00:00", color = textDim, fontSize = 9.sp)
-                Text("00:05", color = textDim, fontSize = 9.sp)
-                Text("00:10", color = textDim, fontSize = 9.sp)
-                Text("00:15", color = textDim, fontSize = 9.sp)
+
+        // Timeline ruler and layered tracks.
+        Column(Modifier.fillMaxWidth().background(Color(0xFF111315)).padding(top = 7.dp, bottom = 5.dp)) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 13.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("00:00", color = Color(0xFFB9BDC1), fontSize = 9.sp, modifier = Modifier.weight(1f))
+                Text("00:05", color = Color(0xFFB9BDC1), fontSize = 9.sp, modifier = Modifier.weight(1f))
+                Text("00:10", color = Color(0xFFB9BDC1), fontSize = 9.sp, modifier = Modifier.weight(1f))
+                Text("00:15", color = Color(0xFFB9BDC1), fontSize = 9.sp)
             }
-            Spacer(Modifier.height(7.dp))
-            clips.forEach { clip ->
-                Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(clip.kind, color = textDim, fontSize = 8.sp, modifier = Modifier.width(43.dp))
-                    Box(Modifier.weight(1f).height(31.dp).clip(RoundedCornerShape(8.dp))
-                        .background(clip.tint.copy(alpha = if (selectedClip == clip.id) 1f else .55f))
-                        .then(if (selectedClip == clip.id) Modifier.border(1.dp, Color.White, RoundedCornerShape(8.dp)) else Modifier)
-                        .clickable { onSelectClip(clip.id) }.offset(x = if (selectedClip == clip.id) (timelineOffsetMs / 100L).toInt().coerceAtMost(120).dp else 0.dp).padding(horizontal = 9.dp), contentAlignment = Alignment.CenterStart) {
-                        Text(clip.title, color = Color.White, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Spacer(Modifier.height(6.dp))
+            Row(Modifier.fillMaxWidth().heightIn(min = 112.dp, max = 148.dp)) {
+                Column(Modifier.width(57.dp).padding(start = 9.dp, top = 1.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Text("Video", color = Color(0xFFD6D8DA), fontSize = 9.sp, modifier = Modifier.height(34.dp), maxLines = 1)
+                    Text("Audio", color = Color(0xFFD6D8DA), fontSize = 9.sp, modifier = Modifier.height(29.dp), maxLines = 1)
+                    Text("Text", color = Color(0xFFD6D8DA), fontSize = 9.sp, modifier = Modifier.height(29.dp), maxLines = 1)
+                }
+                Box(Modifier.weight(1f).fillMaxHeight()) {
+                    Column(Modifier.fillMaxSize().horizontalScroll(timelineScroll), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(3.dp), modifier = Modifier.height(34.dp)) {
+                            val videoClips = clips.filter { it.kind == "VIDEO" || it.kind == "OVERLAY" }
+                            if (videoClips.isEmpty()) {
+                                Box(Modifier.width(210.dp).fillMaxHeight().clip(RoundedCornerShape(4.dp)).background(Color(0xFF292D30)).clickable { onImport() }, contentAlignment = Alignment.Center) {
+                                    Text("＋  Add video", color = Color(0xFFB7F36B), fontSize = 10.sp)
+                                }
+                            } else videoClips.forEach { clip ->
+                                Box(
+                                    Modifier.width(145.dp).fillMaxHeight().clip(RoundedCornerShape(4.dp))
+                                        .background(if (selectedClip == clip.id) Color(0xFF607B3D) else Color(0xFF384A2D))
+                                        .then(if (selectedClip == clip.id) Modifier.border(1.dp, Color(0xFFB7F36B), RoundedCornerShape(4.dp)) else Modifier)
+                                        .clickable { onSelectClip(clip.id) }.padding(horizontal = 7.dp),
+                                    contentAlignment = Alignment.CenterStart
+                                ) {
+                                    Text(clip.title, color = Color.White, fontSize = 9.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+                            }
+                            Surface(onClick = onImport, color = Color(0xFF292D30), shape = RoundedCornerShape(4.dp), modifier = Modifier.width(34.dp).height(34.dp)) {
+                                Box(contentAlignment = Alignment.Center) { Text("+", color = Color.White, fontSize = 20.sp) }
+                            }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(3.dp), modifier = Modifier.height(29.dp)) {
+                            val audioClips = clips.filter { it.kind == "AUDIO" }
+                            if (audioClips.isEmpty()) {
+                                Box(Modifier.width(145.dp).fillMaxHeight().clip(RoundedCornerShape(4.dp)).background(Color(0xFF22272A)).clickable { onAddLayer() }, contentAlignment = Alignment.CenterStart) {
+                                    Text("＋ Add audio", color = Color(0xFF9BCB9A), fontSize = 9.sp, modifier = Modifier.padding(start = 8.dp))
+                                }
+                            } else audioClips.forEach { clip ->
+                                Box(Modifier.width(145.dp).fillMaxHeight().clip(RoundedCornerShape(4.dp)).background(Color(0xFF315D49)).clickable { onSelectClip(clip.id) }.padding(horizontal = 7.dp), contentAlignment = Alignment.CenterStart) {
+                                    Text(clip.title, color = Color.White, fontSize = 9.sp, maxLines = 1)
+                                }
+                            }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(3.dp), modifier = Modifier.height(29.dp)) {
+                            val textClips = clips.filter { it.kind == "TEXT" }
+                            if (textClips.isEmpty()) {
+                                Box(Modifier.width(145.dp).fillMaxHeight().clip(RoundedCornerShape(4.dp)).background(Color(0xFF22272A)).clickable { onAddLayer() }, contentAlignment = Alignment.CenterStart) {
+                                    Text("＋ Add text", color = Color(0xFFE1C27B), fontSize = 9.sp, modifier = Modifier.padding(start = 8.dp))
+                                }
+                            } else textClips.forEach { clip ->
+                                Box(Modifier.width(145.dp).fillMaxHeight().clip(RoundedCornerShape(4.dp)).background(Color(0xFF78613A)).clickable { onSelectClip(clip.id) }.padding(horizontal = 7.dp), contentAlignment = Alignment.CenterStart) {
+                                    Text(clip.title, color = Color.White, fontSize = 9.sp, maxLines = 1)
+                                }
+                            }
+                        }
+                    }
+                    Box(Modifier.align(Alignment.TopCenter).width(1.dp).fillMaxHeight().background(Color.White.copy(alpha = .9f)))
+                }
+            }
+            Row(Modifier.fillMaxWidth().padding(horizontal = 13.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(notice, color = Color(0xFF92969B), fontSize = 9.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                Text("＋ Add track", color = Color(0xFFB7F36B), fontSize = 10.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.clickable { onAddLayer() }.padding(5.dp))
+            }
+        }
+
+        // Main category strip, followed by tools for the selected category.
+        Column(Modifier.fillMaxWidth().background(Color(0xFF090A0B)).padding(top = 5.dp, bottom = 7.dp)) {
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 7.dp), horizontalArrangement = Arrangement.spacedBy(19.dp)) {
+                categories.forEach { category ->
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.clickable { onCategory(category) }.padding(vertical = 5.dp)
+                    ) {
+                        Text(
+                            when (category) { "Edit" -> "✂"; "Audio" -> "♫"; "Text" -> "T"; "Stickers" -> "☺"; "Overlay" -> "▧"; "Effects" -> "✧"; "Filters" -> "◐"; else -> "☼" },
+                            color = if (editorCategory == category) Color(0xFFB7F36B) else Color(0xFFB9BDC1),
+                            fontSize = 19.sp, fontWeight = FontWeight.Medium
+                        )
+                        Text(category, color = if (editorCategory == category) Color(0xFFB7F36B) else Color(0xFFB9BDC1), fontSize = 9.sp)
                     }
                 }
             }
-            if (clips.isEmpty()) Text("Add a layer to begin building your timeline.", color = textDim, fontSize = 10.sp, modifier = Modifier.padding(10.dp))
-        }
-        if (clips.isNotEmpty()) {
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(surface2).padding(horizontal = 10.dp, vertical = 4.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("CLIP POS", color = cyan, fontSize = 8.sp, modifier = Modifier.width(52.dp))
-                    Slider(value = timelineOffsetMs.coerceIn(0L, 15000L).toFloat(), onValueChange = { onTimelineOffset(it.toLong()) }, valueRange = 0f..15000f, modifier = Modifier.weight(1f).height(25.dp))
-                    Text(formatTime(timelineOffsetMs), color = textDim, fontSize = 9.sp)
-                }
-                if (durationMs > 0L && videoUri != null) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("IN", color = cyan, fontSize = 8.sp, modifier = Modifier.width(52.dp))
-                        Slider(value = trimStartMs.coerceIn(0L, durationMs).toFloat(), onValueChange = { value -> onTrimStart(value.toLong().coerceAtMost((trimEndMs.takeIf { it > 0L } ?: durationMs) - 1L)) }, valueRange = 0f..durationMs.toFloat(), modifier = Modifier.weight(1f).height(25.dp))
-                        Text(formatTime(trimStartMs), color = textDim, fontSize = 9.sp)
+            Spacer(Modifier.height(3.dp))
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 10.dp), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                when (editorCategory) {
+                    "Edit" -> {
+                        EditorTool("Split", Icons.Outlined.ContentCut, Modifier.width(66.dp), onSplit)
+                        EditorTool("Delete", Icons.Outlined.DeleteOutline, Modifier.width(66.dp), onDelete)
+                        EditorTool("Speed", Icons.Outlined.Speed, Modifier.width(66.dp), onSpeed)
+                        EditorTool("Transform", Icons.Outlined.AutoFixHigh, Modifier.width(82.dp)) { onCategory("Adjust") }
                     }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("OUT", color = cyan, fontSize = 8.sp, modifier = Modifier.width(52.dp))
-                        Slider(value = (trimEndMs.takeIf { it > 0L } ?: durationMs).coerceIn(1L, durationMs).toFloat(), onValueChange = { value -> onTrimEnd(value.toLong().coerceAtLeast(trimStartMs + 1L)) }, valueRange = 1f..durationMs.toFloat(), modifier = Modifier.weight(1f).height(25.dp))
-                        Text(formatTime(trimEndMs.takeIf { it > 0L } ?: durationMs), color = textDim, fontSize = 9.sp)
+                    "Audio" -> {
+                        EditorTool("Add audio", Icons.Outlined.FileUpload, Modifier.width(82.dp), onAddLayer)
+                        EditorTool("Extract", Icons.Outlined.Speed, Modifier.width(72.dp), onAddLayer)
+                        EditorTool("Volume", Icons.Outlined.AutoFixHigh, Modifier.width(72.dp), onAddLayer)
+                    }
+                    "Text" -> {
+                        EditorTool("Add text", Icons.Outlined.AutoFixHigh, Modifier.width(76.dp), onAddLayer)
+                        EditorTool("Captions", Icons.Outlined.FileUpload, Modifier.width(76.dp), onAddLayer)
+                    }
+                    "Stickers" -> EditorTool("Add sticker", Icons.Outlined.AutoFixHigh, Modifier.width(90.dp), onAddLayer)
+                    "Overlay" -> EditorTool("Add overlay", Icons.Outlined.FileUpload, Modifier.width(90.dp), onAddLayer)
+                    "Effects" -> EditorTool("Video effects", Icons.Outlined.AutoFixHigh, Modifier.width(95.dp), onEffects)
+                    "Filters" -> EditorTool("Filters", Icons.Outlined.AutoFixHigh, Modifier.width(80.dp), onEffects)
+                    else -> {
+                        EditorTool("Position", Icons.Outlined.AutoFixHigh, Modifier.width(78.dp)) { onCategory("Edit") }
+                        EditorTool("Keyframes", Icons.Outlined.Speed, Modifier.width(78.dp)) { onCategory("Edit") }
+                        EditorTool("Graph", Icons.Outlined.AccountTree, Modifier.width(72.dp), onNodes)
                     }
                 }
             }
         }
-        Spacer(Modifier.height(8.dp))
-        // CapCut-inspired contextual tool dock: categories first, tools below.
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-            listOf("Edit", "Audio", "Text", "Overlay", "Effects", "Filters", "Adjust").forEach { category ->
-                Surface(onClick = { onCategory(category) }, shape = RoundedCornerShape(12.dp),
-                    color = if (editorCategory == category) violet.copy(alpha = .24f) else surface2,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, if (editorCategory == category) violet else line)) {
-                    Text(category, color = if (editorCategory == category) cyan else textDim, fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp))
-                }
-            }
-        }
-        Spacer(Modifier.height(7.dp))
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            when (editorCategory) {
-                "Edit" -> {
-                    EditorTool("Split", Icons.Outlined.ContentCut, Modifier.width(76.dp), onSplit)
-                    EditorTool("Delete", Icons.Outlined.DeleteOutline, Modifier.width(76.dp), onDelete)
-                    EditorTool("Speed", Icons.Outlined.Speed, Modifier.width(76.dp), onSpeed)
-                    EditorTool("Transform", Icons.Outlined.AutoFixHigh, Modifier.width(76.dp)) { onCategory("Adjust") }
-                }
-                "Audio" -> {
-                    EditorTool("Add audio", Icons.Outlined.FileUpload, Modifier.width(86.dp), onAddLayer)
-                    EditorTool("Extract", Icons.Outlined.Speed, Modifier.width(86.dp), onAddLayer)
-                    EditorTool("Volume", Icons.Outlined.AutoFixHigh, Modifier.width(86.dp), onAddLayer)
-                }
-                "Text" -> {
-                    EditorTool("Add text", Icons.Outlined.AutoFixHigh, Modifier.width(86.dp), onAddLayer)
-                    EditorTool("Captions", Icons.Outlined.FileUpload, Modifier.width(86.dp), onAddLayer)
-                }
-                "Overlay" -> EditorTool("Add overlay", Icons.Outlined.FileUpload, Modifier.width(100.dp), onAddLayer)
-                "Effects" -> EditorTool("Video effects", Icons.Outlined.AutoFixHigh, Modifier.width(100.dp), onEffects)
-                "Filters" -> EditorTool("Browse filters", Icons.Outlined.AutoFixHigh, Modifier.width(100.dp), onEffects)
-                else -> {
-                    EditorTool("Position", Icons.Outlined.AutoFixHigh, Modifier.width(86.dp)) { onCategory("Edit") }
-                    EditorTool("Keyframes", Icons.Outlined.Speed, Modifier.width(86.dp)) { onCategory("Edit") }
-                    EditorTool("Graph", Icons.Outlined.AccountTree, Modifier.width(86.dp), onNodes)
-                }
-            }
-        }
-        Spacer(Modifier.height(12.dp))
     }
 }
 
