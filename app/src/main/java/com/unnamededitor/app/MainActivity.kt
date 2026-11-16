@@ -43,6 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.IntOffset
 import kotlinx.coroutines.delay
 import org.json.JSONArray
 import org.json.JSONObject
@@ -121,8 +122,20 @@ private fun UnnamedEditor() {
     var quality by remember { mutableStateOf(contextPrefs("quality", "High")) }
     var speed by remember { mutableStateOf("1.0×") }
     var showExportInfo by remember { mutableStateOf(false) }
+    var previewX by remember { mutableFloatStateOf(contextPrefs("previewX", "0").toFloatOrNull() ?: 0f) }
+    var previewY by remember { mutableFloatStateOf(contextPrefs("previewY", "0").toFloatOrNull() ?: 0f) }
+    var timelineOffsetMs by remember { mutableLongStateOf(contextPrefs("timelineOffset", "0").toLongOrNull() ?: 0L) }
+    var trimStartMs by remember { mutableLongStateOf(contextPrefs("trimStart", "0").toLongOrNull() ?: 0L) }
+    var trimEndMs by remember { mutableLongStateOf(contextPrefs("trimEnd", "0").toLongOrNull() ?: 0L) }
+    var exportProgress by remember { mutableIntStateOf(0) }
+    var exportMessage by remember { mutableStateOf("Ready to export") }
+    var exporting by remember { mutableStateOf(false) }
     val context = LocalContext.current
-    LaunchedEffect(projectName, videoUri, videoName, clips, activeEffects, resolution, frameRate, quality) { saveEditorState(context, projectName, videoUri, videoName, clips, activeEffects, resolution, frameRate, quality) }
+    LaunchedEffect(projectName, videoUri, videoName, clips, activeEffects, resolution, frameRate, quality, previewX, previewY, timelineOffsetMs, trimStartMs, trimEndMs) {
+        saveEditorState(context, projectName, videoUri, videoName, clips, activeEffects, resolution, frameRate, quality)
+        appPrefs().edit().putString("previewX", previewX.toString()).putString("previewY", previewY.toString())
+            .putString("timelineOffset", timelineOffsetMs.toString()).putString("trimStart", trimStartMs.toString()).putString("trimEnd", trimEndMs.toString()).apply()
+    }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
             videoUri = uri
@@ -179,7 +192,10 @@ private fun UnnamedEditor() {
                         onAddLayer = { showAddLayer = true },
                         onEffects = { page = "Effects" },
                         onNodes = { page = "Nodes" },
-                        onExport = { page = "Export" }
+                        onExport = { page = "Export" },
+                        previewX = previewX, previewY = previewY, timelineOffsetMs = timelineOffsetMs, trimStartMs = trimStartMs, trimEndMs = trimEndMs,
+                        onPreviewX = { previewX = it }, onPreviewY = { previewY = it }, onTimelineOffset = { timelineOffsetMs = it },
+                        onTrimStart = { trimStartMs = it }, onTrimEnd = { trimEndMs = it }
                     )
                     "Effects" -> EffectsScreen(activeEffects, onToggle = {
                         activeEffects = if (activeEffects.contains(it)) activeEffects - it else activeEffects + it
@@ -189,9 +205,18 @@ private fun UnnamedEditor() {
                         onAdd = { title -> nodes = nodes + NodeItem(nextId++, title, "Effect node"); notice = title + " node added" },
                         onRemove = { id -> nodes = nodes.filterNot { it.id == id }; notice = "Node removed" },
                         onBack = { page = "Editor" })
-                    else -> ExportScreen(resolution, frameRate, quality,
+                    else -> ExportScreen(resolution, frameRate, quality, exportProgress, exportMessage, exporting,
                         onResolution = { resolution = it }, onFrameRate = { frameRate = it }, onQuality = { quality = it },
-                        onBack = { page = "Editor" }, onExport = { showExportInfo = true })
+                        onBack = { page = "Editor" }, onExport = {
+                            if (videoUri == null) { exportMessage = "Import a video first"; showExportInfo = true }
+                            else {
+                                exporting = true; exportProgress = 0; exportMessage = "Preparing video…"
+                                MediaExportEngine.export(context, videoUri!!, trimStartMs, trimEndMs.takeIf { it > 0L },
+                                    onProgress = { exportProgress = it; exportMessage = "Rendering… $it%" },
+                                    onComplete = { file -> exporting = false; exportProgress = 100; exportMessage = "Export complete: " + file.absolutePath; showExportInfo = true },
+                                    onError = { error -> exporting = false; exportMessage = error; showExportInfo = true })
+                            }
+                        })
                 }
             }
             }
@@ -309,6 +334,8 @@ private fun QuickAction(title: String, icon: String, modifier: Modifier, onClick
 private fun EditorScreen(
     project: String, videoUri: Uri?, videoName: String, playing: Boolean, clips: List<ClipItem>,
     selectedClip: Int, speed: String, notice: String, playheadMs: Long, durationMs: Long,
+    previewX: Float, previewY: Float, timelineOffsetMs: Long, trimStartMs: Long, trimEndMs: Long,
+    onPreviewX: (Float) -> Unit, onPreviewY: (Float) -> Unit, onTimelineOffset: (Long) -> Unit, onTrimStart: (Long) -> Unit, onTrimEnd: (Long) -> Unit,
     onBack: () -> Unit, onImport: () -> Unit,
     onPlay: () -> Unit, onPosition: (Long) -> Unit, onDuration: (Long) -> Unit, onSeek: (Long) -> Unit,
     onSelectClip: (Int) -> Unit, onSplit: () -> Unit, onDelete: () -> Unit,
@@ -359,7 +386,7 @@ private fun EditorScreen(
                         view.tag = videoUri.toString()
                         view.setVideoURI(videoUri)
                     }
-                }, modifier = Modifier.fillMaxSize())
+                }, modifier = Modifier.fillMaxSize().offset { IntOffset(previewX.dp.roundToPx(), previewY.dp.roundToPx()) })
             } else {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(Modifier.size(66.dp).clip(CircleShape).background(surface2), contentAlignment = Alignment.Center) { Text("▶", color = violet, fontSize = 26.sp) }
@@ -369,6 +396,14 @@ private fun EditorScreen(
                     Spacer(Modifier.height(14.dp))
                     Button(onClick = onImport, colors = ButtonDefaults.buttonColors(containerColor = violet)) { Text("＋ Import media") }
                 }
+            }
+        }
+        if (videoUri != null) {
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(surface2).padding(horizontal = 10.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("X", color = cyan, fontSize = 10.sp, modifier = Modifier.width(18.dp))
+                Slider(value = previewX.coerceIn(-140f, 140f), onValueChange = onPreviewX, valueRange = -140f..140f, modifier = Modifier.weight(1f).height(28.dp))
+                Text("Y", color = cyan, fontSize = 10.sp, modifier = Modifier.width(18.dp))
+                Slider(value = previewY.coerceIn(-90f, 90f), onValueChange = onPreviewY, valueRange = -90f..90f, modifier = Modifier.weight(1f).height(28.dp))
             }
         }
         Spacer(Modifier.height(12.dp))
@@ -408,6 +443,27 @@ private fun EditorScreen(
                 }
             }
             if (clips.isEmpty()) Text("Add a layer to begin building your timeline.", color = textDim, fontSize = 10.sp, modifier = Modifier.padding(10.dp))
+        }
+        if (clips.isNotEmpty()) {
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(surface2).padding(horizontal = 10.dp, vertical = 4.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("CLIP POS", color = cyan, fontSize = 8.sp, modifier = Modifier.width(52.dp))
+                    Slider(value = timelineOffsetMs.coerceIn(0L, 15000L).toFloat(), onValueChange = { onTimelineOffset(it.toLong()) }, valueRange = 0f..15000f, modifier = Modifier.weight(1f).height(25.dp))
+                    Text(formatTime(timelineOffsetMs), color = textDim, fontSize = 9.sp)
+                }
+                if (durationMs > 0L && videoUri != null) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("IN", color = cyan, fontSize = 8.sp, modifier = Modifier.width(52.dp))
+                        Slider(value = trimStartMs.coerceIn(0L, durationMs).toFloat(), onValueChange = { value -> onTrimStart(value.toLong().coerceAtMost((trimEndMs.takeIf { it > 0L } ?: durationMs) - 1L) }, valueRange = 0f..durationMs.toFloat(), modifier = Modifier.weight(1f).height(25.dp))
+                        Text(formatTime(trimStartMs), color = textDim, fontSize = 9.sp)
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("OUT", color = cyan, fontSize = 8.sp, modifier = Modifier.width(52.dp))
+                        Slider(value = (trimEndMs.takeIf { it > 0L } ?: durationMs).coerceIn(1L, durationMs).toFloat(), onValueChange = { value -> onTrimEnd(value.toLong().coerceAtLeast(trimStartMs + 1L)) }, valueRange = 1f..durationMs.toFloat(), modifier = Modifier.weight(1f).height(25.dp))
+                        Text(formatTime(trimEndMs.takeIf { it > 0L } ?: durationMs), color = textDim, fontSize = 9.sp)
+                    }
+                }
+            }
         }
         Spacer(Modifier.height(8.dp))
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -517,7 +573,7 @@ private fun NodesScreen(nodes: List<NodeItem>, onAdd: (String) -> Unit, onRemove
 }
 
 @Composable
-private fun ExportScreen(resolution: String, frameRate: String, quality: String, onResolution: (String) -> Unit, onFrameRate: (String) -> Unit, onQuality: (String) -> Unit, onBack: () -> Unit, onExport: () -> Unit) {
+private fun ExportScreen(resolution: String, frameRate: String, quality: String, progress: Int, message: String, exporting: Boolean, onResolution: (String) -> Unit, onFrameRate: (String) -> Unit, onQuality: (String) -> Unit, onBack: () -> Unit, onExport: () -> Unit) {
     Column(Modifier.fillMaxSize().padding(18.dp)) {
         PageHeader("Export settings", "OUTPUT CONFIGURATION", onBack)
         Box(Modifier.fillMaxWidth().height(155.dp).clip(RoundedCornerShape(22.dp)).background(gradient), contentAlignment = Alignment.Center) {
@@ -532,7 +588,9 @@ private fun ExportScreen(resolution: String, frameRate: String, quality: String,
         SettingRow("Frame rate", frameRate, listOf("24 FPS", "30 FPS", "60 FPS"), onFrameRate)
         SettingRow("Quality", quality, listOf("Standard", "High", "Maximum"), onQuality)
         Spacer(Modifier.weight(1f))
-        Text("Settings are interactive. Video rendering is not connected yet.", color = textDim, fontSize = 10.sp)
+        Text("MP4 render · Source trim · H.264", color = textDim, fontSize = 10.sp)
+        if (exporting) LinearProgressIndicator(progress = { progress / 100f }, modifier = Modifier.fillMaxWidth())
+        Text(message, color = textDim, fontSize = 10.sp, maxLines = 2)
         Spacer(Modifier.height(10.dp))
         PrimaryButton("Prepare export", onExport)
     }
