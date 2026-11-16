@@ -345,7 +345,7 @@ private fun EditorScreen(
 ) {
     val videoView = remember { mutableStateOf<VideoView?>(null) }
     val timelineScroll = rememberScrollState()
-    LaunchedEffect(playing, videoUri) {
+    LaunchedEffect(playing, videoUri, speed) {
         val view = videoView.value
         if (view != null && videoUri != null) {
             if (playing) view.start() else view.pause()
@@ -431,21 +431,9 @@ private fun EditorScreen(
             IconButton(onClick = onPlay, modifier = Modifier.size(38.dp)) {
                 Icon(if (playing) Icons.Outlined.Pause else Icons.Outlined.PlayArrow, contentDescription = if (playing) "Pause" else "Play", tint = Color.White, modifier = Modifier.size(26.dp))
             }
-            Text("↶", color = Color(0xFFB8BBC0), fontSize = 22.sp, modifier = Modifier.padding(horizontal = 10.dp))
-            Text("↷", color = Color(0xFFB8BBC0), fontSize = 22.sp)
             IconButton(onClick = onImport, modifier = Modifier.size(36.dp)) {
                 Icon(Icons.Outlined.FileUpload, contentDescription = "Import media", tint = Color(0xFFB8BBC0), modifier = Modifier.size(18.dp))
             }
-        }
-
-        if (durationMs > 0L) {
-            Slider(
-                value = playheadMs.coerceIn(0L, durationMs).toFloat(),
-                onValueChange = { onSeek(it.toLong()); videoView.value?.seekTo(it.toInt()) },
-                valueRange = 0f..durationMs.toFloat(),
-                colors = SliderDefaults.colors(thumbColor = Color.White, activeTrackColor = Color(0xFFB7F36B), inactiveTrackColor = Color(0xFF3C4044)),
-                modifier = Modifier.fillMaxWidth().height(17.dp).padding(horizontal = 12.dp)
-            )
         }
 
         // Timeline ruler and layered tracks.
@@ -522,29 +510,20 @@ private fun EditorScreen(
 
         // Main category strip, followed by tools for the selected category.
         Column(Modifier.fillMaxWidth().background(Color(0xFF090A0B)).padding(top = 5.dp, bottom = 7.dp)) {
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 7.dp), horizontalArrangement = Arrangement.spacedBy(19.dp)) {
-                categories.forEach { category ->
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.clickable { onCategory(category) }.padding(vertical = 5.dp)
-                    ) {
-                        Text(
-                            when (category) { "Edit" -> "✂"; "Audio" -> "♫"; "Text" -> "T"; "Stickers" -> "☺"; "Overlay" -> "▧"; "Effects" -> "✧"; "Filters" -> "◐"; else -> "☼" },
-                            color = if (editorCategory == category) Color(0xFFB7F36B) else Color(0xFFB9BDC1),
-                            fontSize = 19.sp, fontWeight = FontWeight.Medium
-                        )
-                        Text(category, color = if (editorCategory == category) Color(0xFFB7F36B) else Color(0xFFB9BDC1), fontSize = 9.sp)
-                    }
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 10.dp), horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    onClick = { onCategory(categories[(categories.indexOf(editorCategory).coerceAtLeast(0) + 1) % categories.size]) },
+                    color = Color(0xFF252B22), shape = RoundedCornerShape(10.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF566447))
+                ) {
+                    Text("$editorCategory  ›", color = Color(0xFFB7F36B), fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp))
                 }
-            }
-            Spacer(Modifier.height(3.dp))
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 10.dp), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                 when (editorCategory) {
                     "Edit" -> {
                         EditorTool("Split", Icons.Outlined.ContentCut, Modifier.width(66.dp), onSplit)
                         EditorTool("Delete", Icons.Outlined.DeleteOutline, Modifier.width(66.dp), onDelete)
                         EditorTool("Speed", Icons.Outlined.Speed, Modifier.width(66.dp), onSpeed)
-                        EditorTool("Transform", Icons.Outlined.AutoFixHigh, Modifier.width(82.dp)) { onCategory("Adjust") }
+                        EditorTool("Adjust", Icons.Outlined.AutoFixHigh, Modifier.width(66.dp)) { onCategory("Adjust") }
                     }
                     "Audio" -> {
                         EditorTool("Add audio", Icons.Outlined.FileUpload, Modifier.width(82.dp), onAddLayer)
@@ -572,12 +551,10 @@ private fun EditorScreen(
 
 @Composable
 private fun EditorTool(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    Surface(onClick = onClick, modifier = modifier.height(72.dp), shape = RoundedCornerShape(19.dp), color = surface2, border = androidx.compose.foundation.BorderStroke(1.dp, line), tonalElevation = 7.dp, shadowElevation = 4.dp) {
-        Column(Modifier.fillMaxSize().padding(vertical = 9.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(Modifier.size(30.dp).clip(RoundedCornerShape(10.dp)).background(violet.copy(alpha = .18f)), contentAlignment = Alignment.Center) {
-                Icon(icon, contentDescription = label, tint = cyan, modifier = Modifier.size(17.dp))
-            }
-            Spacer(Modifier.height(5.dp))
+    Surface(onClick = onClick, modifier = modifier.height(48.dp), shape = RoundedCornerShape(12.dp), color = Color(0xFF20251E), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF343D2F))) {
+        Row(Modifier.fillMaxSize().padding(horizontal = 7.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+            Icon(icon, contentDescription = label, tint = Color(0xFFB7F36B), modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(5.dp))
             Text(label, color = textMain, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
