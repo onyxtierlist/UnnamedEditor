@@ -31,7 +31,7 @@ object MediaExportEngine {
         val output = File(folder, "Edit_${System.currentTimeMillis()}.mp4")
         val clipping = MediaItem.ClippingConfiguration.Builder()
             .setStartPositionMs(startMs.coerceAtLeast(0L))
-            .apply { if (endMs != null && endMs > startMs then setEndPositionMs(endMs) }
+            .apply { if (endMs != null && endMs > startMs) setEndPositionMs(endMs) }
             .build()
         val item = MediaItem.Builder().setUri(source).setClippingConfiguration(clipping).build()
         val edited = EditedMediaItem.Builder(item).build()
