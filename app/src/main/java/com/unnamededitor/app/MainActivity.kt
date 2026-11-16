@@ -688,25 +688,40 @@ private fun NodesScreen(nodes: List<NodeItem>, onAdd: (String) -> Unit, onRemove
 
 @Composable
 private fun ExportScreen(resolution: String, frameRate: String, quality: String, progress: Int, message: String, exporting: Boolean, onResolution: (String) -> Unit, onFrameRate: (String) -> Unit, onQuality: (String) -> Unit, onBack: () -> Unit, onExport: () -> Unit) {
-    Column(Modifier.fillMaxSize().padding(18.dp)) {
-        PageHeader("Export settings", "OUTPUT CONFIGURATION", onBack)
-        Box(Modifier.fillMaxWidth().height(155.dp).clip(RoundedCornerShape(22.dp)).background(gradient), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("✦", color = Color.White, fontSize = 35.sp)
-                Text("Your final frame starts here", color = Color.White, fontWeight = FontWeight.SemiBold)
-                Text("Configure the output quality", color = Color.White.copy(alpha = .7f), fontSize = 10.sp)
+    Column(Modifier.fillMaxSize().background(Color(0xFF090A0B)).verticalScroll(rememberScrollState()).padding(18.dp)) {
+        PageHeader("Export", "FINAL RENDER", onBack)
+        Surface(shape = RoundedCornerShape(22.dp), color = Color(0xFF1B2118), border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3A4930))) {
+            Column(Modifier.fillMaxWidth().padding(18.dp)) {
+                Text("READY TO RENDER", color = Color(0xFFB7F36B), fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
+                Spacer(Modifier.height(8.dp))
+                Text("Your video. Your quality.", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text("Choose an output size and file quality, then render an MP4.", color = Color(0xFFA4AA9A), fontSize = 11.sp)
             }
         }
         Spacer(Modifier.height(18.dp))
+        Text("VIDEO OUTPUT", color = Color(0xFFB7F36B), fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.3.sp)
         SettingRow("Resolution", resolution, listOf("720p", "1080p", "1440p", "4K"), onResolution)
-        SettingRow("Frame rate", frameRate, listOf("24 FPS", "30 FPS", "60 FPS"), onFrameRate)
+        SettingRow("Frame rate", frameRate, listOf("Source FPS"), onFrameRate)
         SettingRow("Quality", quality, listOf("Standard", "High", "Maximum"), onQuality)
-        Spacer(Modifier.weight(1f))
-        Text("MP4 render · Source trim · H.264", color = textDim, fontSize = 10.sp)
-        if (exporting) LinearProgressIndicator(progress = { progress / 100f }, modifier = Modifier.fillMaxWidth())
-        Text(message, color = textDim, fontSize = 10.sp, maxLines = 2)
         Spacer(Modifier.height(10.dp))
-        PrimaryButton("Prepare export", onExport)
+        Surface(shape = RoundedCornerShape(14.dp), color = Color(0xFF151916)) {
+            Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Text("FORMAT", color = Color(0xFFB7F36B), fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                Text("MP4  ·  H.264 video  ·  AAC audio", color = Color.White, fontSize = 11.sp)
+                Text("Resolution and quality are applied during rendering. Source frame rate is preserved. Exported files are saved in the app's Movies/UnnamedEditor folder.", color = Color(0xFFA4AA9A), fontSize = 10.sp)
+            }
+        }
+        Spacer(Modifier.height(18.dp))
+        if (exporting) {
+            Text("RENDERING  $progress%", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(7.dp))
+            LinearProgressIndicator(progress = { progress / 100f }, modifier = Modifier.fillMaxWidth(), color = Color(0xFFB7F36B), trackColor = Color(0xFF30362D))
+        }
+        Text(message, color = textDim, fontSize = 10.sp, maxLines = 4)
+        Spacer(Modifier.height(14.dp))
+        PrimaryButton(if (exporting) "Rendering…" else "Export video", onExport)
+        Spacer(Modifier.height(8.dp))
+        Text("Keep the app open while rendering. Export time depends on video length and device speed.", color = textDim, fontSize = 9.sp)
     }
 }
 
