@@ -32,4 +32,4 @@ Open the project in Android Studio and run the app configuration, or use the Git
 
 - Package: `com.unnamededitor.app`
 - Minimum Android: 8.0 (API 26)
-- Version: 0.1.0
+- Version: 0.2.0
