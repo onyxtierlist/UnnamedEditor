@@ -109,7 +109,7 @@ private fun UnnamedEditor() {
     var playing by remember { mutableStateOf(false) }
     var playheadMs by remember { mutableLongStateOf(0L) }
     var durationMs by remember { mutableLongStateOf(0L) }
-    var selectedClip by remember { mutableIntStateOf(1) }
+    var selectedClip by remember { mutableIntStateOf(-1) }
     var nextId by remember { mutableIntStateOf((loadSavedClips().maxOfOrNull { it.id } ?: 4) + 1) }
     var notice by remember { mutableStateOf("Ready to create") }
     var showNewProject by remember { mutableStateOf(false) }
