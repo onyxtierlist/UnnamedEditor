@@ -2,6 +2,12 @@ package com.unnamededitor.app
 
 import android.content.Context
 import android.os.Environment
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.content.ContentValues
+import android.provider.MediaStore
+import androidx.media3.transformer.ProgressHolder
 import androidx.media3.common.MediaItem
 import androidx.media3.transformer.DefaultEncoderFactory
 import androidx.media3.transformer.VideoEncoderSettings
@@ -26,7 +32,7 @@ object MediaExportEngine {
         resolution: String,
         quality: String,
         onProgress: (Int) -> Unit,
-        onComplete: (File) -> Unit,
+        onComplete: (String) -> Unit,
         onError: (String) -> Unit
     ) {
         val folder = File(context.getExternalFilesDir(Environment.DIRECTORY_MOVIES), "UnnamedEditor")
@@ -49,16 +55,40 @@ object MediaExportEngine {
             .build()
         val effects = Effects(emptyList(), listOf(Presentation.createForHeight(outputShortSide)))
         val edited = EditedMediaItem.Builder(item).setEffects(effects).build()
-        val transformer = Transformer.Builder(context)
+        val handler = Handler(Looper.getMainLooper())
+        lateinit var transformer: Transformer
+        var finished = false
+        val progressHolder = ProgressHolder()
+        val progressPoll = object : Runnable {
+            override fun run() {
+                if (finished) return
+                if (transformer.getProgress(progressHolder) == Transformer.PROGRESS_STATE_AVAILABLE) {
+                    onProgress(progressHolder.progress.coerceIn(1, 99))
+                }
+                handler.postDelayed(this, 250L)
+            }
+        }
+        transformer = Transformer.Builder(context)
             .setEncoderFactory(encoderFactory)
             .setVideoMimeType(androidx.media3.common.MimeTypes.VIDEO_H264)
             .setAudioMimeType(androidx.media3.common.MimeTypes.AUDIO_AAC)
             .addListener(object : Transformer.Listener {
                 override fun onCompleted(composition: androidx.media3.transformer.Composition, exportResult: ExportResult) {
-                    onProgress(100)
-                    onComplete(output)
+                    finished = true
+                    handler.removeCallbacks(progressPoll)
+                    try {
+                        val destination = publishToGallery(context, output)
+                        output.delete()
+                        onProgress(100)
+                        onComplete(destination)
+                    } catch (error: Exception) {
+                        output.delete()
+                        onError(error.message ?: "Video rendered, but couldn't save it to your gallery.")
+                    }
                 }
                 override fun onError(composition: androidx.media3.transformer.Composition, exportResult: ExportResult, exportException: ExportException) {
+                    finished = true
+                    handler.removeCallbacks(progressPoll)
                     output.delete()
                     onError(exportException.message ?: "Video export failed.")
                 }
@@ -67,9 +97,35 @@ object MediaExportEngine {
         try {
             transformer.start(edited, output.absolutePath)
             onProgress(1)
+            handler.post(progressPoll)
         } catch (error: Exception) {
+            finished = true
+            handler.removeCallbacks(progressPoll)
             output.delete()
             onError(error.message ?: "Couldn't start video export.")
+        }
+    }
+    private fun publishToGallery(context: Context, renderedFile: File): String {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return renderedFile.absolutePath
+        val values = ContentValues().apply {
+            put(MediaStore.Video.Media.DISPLAY_NAME, renderedFile.name)
+            put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
+            put(MediaStore.Video.Media.RELATIVE_PATH, Environment.DIRECTORY_MOVIES + "/UnnamedEditor")
+            put(MediaStore.Video.Media.IS_PENDING, 1)
+        }
+        val resolver = context.contentResolver
+        val destination = resolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, values)
+            ?: throw IllegalStateException("Android couldn't create a gallery entry for this export.")
+        try {
+            resolver.openOutputStream(destination)?.use { output ->
+                renderedFile.inputStream().use { input -> input.copyTo(output) }
+            } ?: throw IllegalStateException("Android couldn't open the gallery file.")
+            val ready = ContentValues().apply { put(MediaStore.Video.Media.IS_PENDING, 0) }
+            resolver.update(destination, ready, null, null)
+            return "Movies/UnnamedEditor/${renderedFile.name}"
+        } catch (error: Exception) {
+            resolver.delete(destination, null, null)
+            throw error
         }
     }
 }
