@@ -210,7 +210,7 @@ private fun UnnamedEditor() {
                             if (chosen != null) {
                                 clips = clips.flatMap { if (it.id == selectedClip) listOf(it.copy(title = it.title + " A"), it.copy(id = nextId++, title = it.title + " B")) else listOf(it) }
                                 selectedClip = clips.first { it.title.endsWith(" A") }.id
-                                notice = "Selected clip split at playhead"
+                                notice = "Selected clip duplicated"
                             } else notice = "Select a clip to split"
                         },
                         onDelete = {
@@ -247,7 +247,7 @@ private fun UnnamedEditor() {
                                 exporting = true; exportProgress = 0; exportMessage = "Preparing video…"
                                 MediaExportEngine.export(context, videoUri!!, trimStartMs, trimEndMs.takeIf { it > 0L }, resolution, quality,
                                     onProgress = { exportProgress = it; exportMessage = "Rendering… $it%" },
-                                    onComplete = { file -> exporting = false; exportProgress = 100; exportMessage = "Export complete: " + file.absolutePath; showExportInfo = true },
+                                    onComplete = { location -> exporting = false; exportProgress = 100; exportMessage = "Export complete. Saved to " + location; showExportInfo = true },
                                     onError = { error -> exporting = false; exportMessage = error; showExportInfo = true })
                             }
                         })
@@ -377,10 +377,12 @@ private fun EditorScreen(
     onSpeed: () -> Unit, onAddLayer: () -> Unit, onEffects: () -> Unit, onNodes: () -> Unit, onExport: () -> Unit
 ) {
     val videoView = remember { mutableStateOf<VideoView?>(null) }
+    val preparedPlayer = remember { mutableStateOf<android.media.MediaPlayer?>(null) }
     val timelineScroll = rememberScrollState()
     LaunchedEffect(playing, videoUri, speed) {
         val view = videoView.value
         if (view != null && videoUri != null) {
+            runCatching { preparedPlayer.value?.setPlaybackParams(android.media.PlaybackParams().setSpeed(speed.removeSuffix("×").toFloatOrNull() ?: 1f)) }
             if (playing) view.start() else view.pause()
         }
     }
@@ -422,6 +424,7 @@ private fun EditorScreen(
                             setVideoURI(videoUri)
                             setOnPreparedListener { mp ->
                                 mp.isLooping = true
+                                preparedPlayer.value = mp
                                 val rate = speed.removeSuffix("×").toFloatOrNull() ?: 1f
                                 mp.setPlaybackParams(android.media.PlaybackParams().setSpeed(rate))
                                 onDuration(mp.duration.toLong())
@@ -563,9 +566,9 @@ private fun EditorScreen(
                 }
                 when (editorCategory) {
                     "Edit" -> {
-                        EditorTool("Split", Icons.Outlined.ContentCut, Modifier.width(66.dp), onSplit)
+                        EditorTool("Duplicate", Icons.Outlined.ContentCut, Modifier.width(78.dp), onSplit)
                         EditorTool("Delete", Icons.Outlined.DeleteOutline, Modifier.width(66.dp), onDelete)
-                        EditorTool("Speed", Icons.Outlined.Speed, Modifier.width(66.dp), onSpeed)
+                        EditorTool("Preview speed", Icons.Outlined.Speed, Modifier.width(104.dp), onSpeed)
                         EditorTool("Set start", Icons.Outlined.ContentCut, Modifier.width(78.dp)) { onTrimStart(playheadMs) }
                         EditorTool("Set end", Icons.Outlined.ContentCut, Modifier.width(72.dp)) { onTrimEnd(playheadMs) }
                         EditorTool("Reset trim", Icons.Outlined.ContentCut, Modifier.width(82.dp), onResetTrim)
@@ -703,7 +706,7 @@ private fun ExportScreen(resolution: String, frameRate: String, quality: String,
             Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Text("FORMAT", color = Color(0xFFB7F36B), fontSize = 9.sp, fontWeight = FontWeight.Bold)
                 Text("MP4  ·  H.264 video  ·  AAC audio", color = Color.White, fontSize = 11.sp)
-                Text("Resolution and quality are applied during rendering. Source frame rate is preserved. Exported files are saved in the app's Movies/UnnamedEditor folder.", color = Color(0xFFA4AA9A), fontSize = 10.sp)
+                Text("Resolution and quality are applied during rendering. Source frame rate is preserved. On Android 10+, exports are saved to Gallery → Movies/UnnamedEditor.", color = Color(0xFFA4AA9A), fontSize = 10.sp)
             }
         }
         Spacer(Modifier.height(18.dp))
