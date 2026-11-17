@@ -76,15 +76,21 @@ object MediaExportEngine {
                 override fun onCompleted(composition: androidx.media3.transformer.Composition, exportResult: ExportResult) {
                     finished = true
                     handler.removeCallbacks(progressPoll)
-                    try {
-                        val destination = publishToGallery(context, output)
-                        output.delete()
-                        onProgress(100)
-                        onComplete(destination)
-                    } catch (error: Exception) {
-                        output.delete()
-                        onError(error.message ?: "Video rendered, but couldn't save it to your gallery.")
-                    }
+                    Thread {
+                        try {
+                            val destination = publishToGallery(context, output)
+                            output.delete()
+                            handler.post {
+                                onProgress(100)
+                                onComplete(destination)
+                            }
+                        } catch (error: Exception) {
+                            output.delete()
+                            handler.post {
+                                onError(error.message ?: "Video rendered, but couldn't save it to your gallery.")
+                            }
+                        }
+                    }.start()
                 }
                 override fun onError(composition: androidx.media3.transformer.Composition, exportResult: ExportResult, exportException: ExportException) {
                     finished = true
