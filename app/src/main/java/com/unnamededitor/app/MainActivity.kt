@@ -195,8 +195,12 @@ private fun UnnamedEditor() {
                         onBack = { page = "Home" },
                         onImport = { picker.launch(arrayOf("video/*")) },
                         onPlay = {
-                            playing = !playing
-                            notice = if (playing) "Playback paused" else "Playback started"
+                            if (videoUri == null) {
+                                notice = "Import a video before playback"
+                            } else {
+                                playing = !playing
+                                notice = if (playing) "Playback paused" else "Playback started"
+                            }
                         },
                         onPosition = { playheadMs = it },
                         onDuration = { durationMs = it },
@@ -263,7 +267,28 @@ private fun UnnamedEditor() {
             onDismissRequest = { showNewProject = false },
             title = { Text("Create project", color = textMain) },
             text = { OutlinedTextField(value = newName, onValueChange = { newName = it }, label = { Text("Project name") }, singleLine = true) },
-            confirmButton = { TextButton(onClick = { projectName = newName.ifBlank { "Untitled Project" }; clips = emptyList(); activeEffects = emptySet(); videoUri = null; videoName = "No media imported"; page = "Editor"; showNewProject = false }) { Text("Create") } },
+            confirmButton = { TextButton(onClick = {
+                projectName = newName.ifBlank { "Untitled Project" }
+                clips = emptyList()
+                activeEffects = emptySet()
+                videoUri = null
+                videoName = "No media imported"
+                selectedClip = -1
+                undoHistory = emptyList()
+                redoHistory = emptyList()
+                playheadMs = 0L
+                durationMs = 0L
+                trimStartMs = 0L
+                trimEndMs = 0L
+                speed = "1.0×"
+                previewX = 0f
+                previewY = 0f
+                timelineOffsetMs = 0L
+                editorCategory = "Edit"
+                playing = false
+                page = "Editor"
+                showNewProject = false
+            }) { Text("Create") } },
             dismissButton = { TextButton(onClick = { showNewProject = false }) { Text("Cancel") } },
             containerColor = surface
         )
