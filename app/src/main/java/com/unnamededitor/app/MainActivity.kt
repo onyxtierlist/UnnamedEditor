@@ -404,6 +404,7 @@ private fun EditorScreen(
     val videoView = remember { mutableStateOf<VideoView?>(null) }
     val preparedPlayer = remember { mutableStateOf<android.media.MediaPlayer?>(null) }
     val timelineScroll = rememberScrollState()
+    val density = androidx.compose.ui.platform.LocalDensity.current.density
     LaunchedEffect(playing, videoUri, speed) {
         val view = videoView.value
         if (view != null && videoUri != null) {
@@ -503,7 +504,6 @@ private fun EditorScreen(
         LaunchedEffect(timelineScroll.value) {
             onTimelineOffset(timelineScroll.value.toLong())
             if (durationMs > 0L) {
-                val density = androidx.compose.ui.platform.LocalDensity.current.density
                 val target = ((timelineScroll.value / density / 48f) * 1000f).toLong().coerceIn(0L, durationMs)
                 onSeek(target)
                 videoView.value?.seekTo(target.toInt())
