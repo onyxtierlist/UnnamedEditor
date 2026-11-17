@@ -1,28 +1,35 @@
-# UnnamedEditor — Android Prototype 0.1
+# UnnamedEditor
 
-An independent Android-first video editor with a flexible timeline, visual effects workspace, and node-based compositing tools.
+An independent Android-first video editor prototype with a mobile editing workspace, local project state, video preview, trim controls, undo/redo, and MP4 export.
 
-## Included in this prototype
-- Home screen with new project and recent-project entry points
-- Timeline workspace with mock video/audio/text/effects tracks
-- Node editor canvas with example processing nodes
-- Effects browser with category filters
-- Export settings UI
+## Current working features
+- Create a project and import a video using Android's document picker
+- Preview imported video and play/pause
+- Timeline track layout for video, audio, and text layer placeholders
+- Select and delete timeline entries; duplicate a selected entry
+- Set trim start/end points and reset trim
+- Undo/redo supported editor-state changes (up to 50 history steps)
+- Preview speed control
+- Effects selection UI and node workspace (saved as project state; not rendered)
+- Export the imported source video as MP4 (H.264 video, AAC audio)
+- Choose 720p, 1080p, 1440p, or 4K output size and Standard/High/Maximum bitrate preset
+- Save completed exports to Gallery → Movies/UnnamedEditor on Android 10+
 
-## Important status
-This is the first **interactive UI prototype**, not a finished video editor. Media import, real timeline playback, GPU effects execution, node evaluation, project persistence, and video export are not implemented yet.
+## Important limitations
+This is an early usable prototype, not a full professional multitrack editor.
+- Export currently processes only the imported source video with the selected trim range.
+- Additional timeline tracks, audio layers, text, stickers, overlays, effects, filters, and node graphs are not composited into the exported file.
+- Timeline clip blocks are visual entries; they do not yet have independent time positions or durations.
+- Duplicate creates a second timeline entry; it does not cut the source media at the playhead.
+- Preview speed is a playback control and is not baked into export.
+- Frame rate follows the source video.
+- Project data is stored locally on the device; there is no cloud sync.
 
-## Build locally
-Open this folder in Android Studio, allow Gradle sync, then run the `app` configuration on an Android device or emulator.
+These limitations are stated explicitly so the UI does not imply that unsupported edits are included in the render.
 
-## Build an APK using GitHub Actions
-1. Push this project to a GitHub repository.
-2. Open the repository's **Actions** tab.
-3. Run **Build UnnamedEditor APK** (or push to `main`/`master`).
-4. Download the `UnnamedEditor-debug-apk` artifact from the completed workflow.
-
-The APK is a debug build for testing, not a Play Store release.
+## Build
+Open the project in Android Studio and run the app configuration, or use the GitHub Actions workflow **Build UnnamedEditor APK**. The workflow produces a debug APK suitable for device testing, not a signed Play Store release.
 
 - Package: `com.unnamededitor.app`
-- Min Android: Android 8.0 (API 26)
-- Version: `0.1.0`
+- Minimum Android: 8.0 (API 26)
+- Version: 0.1.0
