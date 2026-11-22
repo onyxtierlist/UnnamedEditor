@@ -169,7 +169,17 @@ private fun UnnamedEditor() {
             runCatching { context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) }
             videoName = uri.lastPathSegment?.substringAfterLast('/') ?: "Imported video"
             playing = false
-            if (clips.none { it.kind == "VIDEO" }) clips = clips + ClipItem(nextId++, videoName, "VIDEO", Color(0xFF6B8E42))
+            playheadMs = 0L
+            durationMs = 0L
+            timelineOffsetMs = 0L
+            trimStartMs = 0L
+            trimEndMs = 0L
+            val sourceClip = clips.firstOrNull { it.kind == "VIDEO" }
+            clips = if (sourceClip == null) {
+                clips + ClipItem(nextId++, videoName, "VIDEO", Color(0xFF6B8E42))
+            } else {
+                clips.map { if (it.id == sourceClip.id) it.copy(title = videoName) else it }
+            }
             notice = "Media imported successfully"
         }
     }
@@ -218,11 +228,24 @@ private fun UnnamedEditor() {
                             } else notice = "Select a clip to split"
                         },
                         onDelete = {
-                            if (clips.none { it.id == selectedClip }) { notice = "Select a clip first" } else {
-                            pushUndo()
-                            clips = clips.filterNot { it.id == selectedClip }
-                            selectedClip = clips.firstOrNull()?.id ?: -1
-                            notice = "Selected layer removed"
+                            val selected = clips.firstOrNull { it.id == selectedClip }
+                            if (selected == null) {
+                                notice = "Select a clip first"
+                            } else {
+                                pushUndo()
+                                clips = clips.filterNot { it.id == selectedClip }
+                                if (selected.kind == "VIDEO") {
+                                    videoUri = null
+                                    videoName = "No media imported"
+                                    playing = false
+                                    playheadMs = 0L
+                                    durationMs = 0L
+                                    trimStartMs = 0L
+                                    trimEndMs = 0L
+                                    timelineOffsetMs = 0L
+                                }
+                                selectedClip = clips.firstOrNull()?.id ?: -1
+                                notice = "Selected layer removed"
                             }
                         },
                         onSpeed = { pushUndo(); speed = if (speed == "1.0×") "1.5×" else if (speed == "1.5×") "2.0×" else "1.0×"; notice = "Preview speed set to " + speed },
