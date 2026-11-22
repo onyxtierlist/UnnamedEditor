@@ -583,8 +583,12 @@ private fun EditorScreen(
                 // The canvas has a half-viewport leading gutter, so scroll offset
                 // maps directly to the time under the centered playhead.
                 val target = ((timelineScroll.value / density / 48f) * 1000f).toLong().coerceIn(0L, durationMs)
-                onSeek(target)
-                videoView.value?.seekTo(target.toInt())
+                // While playing, the scroll is following the live playhead. Seeking
+                // on every auto-scroll tick would continually interrupt playback.
+                if (!playing) {
+                    onSeek(target)
+                    videoView.value?.seekTo(target.toInt())
+                }
             }
         }
         // Advance the timeline underneath the fixed playhead during playback.
