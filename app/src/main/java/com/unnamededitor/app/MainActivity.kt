@@ -119,7 +119,8 @@ private fun loadSavedEffects(): Map<String, Float> = runCatching {
                     "Brightness" -> 0.08f
                     else -> 0f
                 }
-                put(name, migrated)
+                val key = if (name == "Color Grade") "Saturation" else name
+                put(key, migrated)
             }
         }
     }
