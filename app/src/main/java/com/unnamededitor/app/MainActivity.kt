@@ -482,16 +482,25 @@ private fun EditorScreen(
     LaunchedEffect(playing, videoUri, trimStartMs, trimEndMs, durationMs) {
         if (playing && videoUri != null) {
             var lastUiUpdateNanos = 0L
+            var waitingForTrimSeek = false
             while (true) {
                 val frameTimeNanos = withFrameNanos { it }
                 val view = videoView.value ?: continue
                 val position = view.currentPosition.toLong()
                 val start = trimStartMs.coerceAtLeast(0L)
                 val end = trimEndMs
-                val effectivePosition = if (position < start || (end > start && position >= end)) {
-                    view.seekTo(start.toInt())
+                val outsideTrim = position < start || (end > start && position >= end)
+                val effectivePosition = if (outsideTrim) {
+                    // VideoView seeks asynchronously; issue one seek, not one seek per frame.
+                    if (!waitingForTrimSeek) {
+                        view.seekTo(start.toInt())
+                        waitingForTrimSeek = true
+                    }
                     start
-                } else position
+                } else {
+                    waitingForTrimSeek = false
+                    position
+                }
 
                 // 30 Hz UI updates are smooth without forcing a full recomposition at 60 Hz.
                 if (frameTimeNanos - lastUiUpdateNanos >= 33_000_000L) {
