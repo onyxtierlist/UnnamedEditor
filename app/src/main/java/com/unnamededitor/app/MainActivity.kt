@@ -199,7 +199,7 @@ private fun UnnamedEditor() {
                                 notice = "Import a video before playback"
                             } else {
                                 playing = !playing
-                                notice = if (playing) "Playback paused" else "Playback started"
+                                notice = if (playing) "Playback started" else "Playback paused"
                             }
                         },
                         onPosition = { playheadMs = it },
@@ -497,6 +497,8 @@ private fun EditorScreen(
         }
 
         // Scrollable, synchronized timeline: ruler and every track move as one canvas.
+        // 48 dp represents one second. Keep a useful scrollable canvas even before
+        // duration metadata arrives; side gutters center time zero under the playhead.
         val timelineContentWidth = maxOf(900.dp, ((durationMs.coerceAtLeast(30_000L) / 1000f) * 48f).dp)
         LaunchedEffect(Unit) {
             timelineScroll.scrollTo(timelineOffsetMs.toInt().coerceAtLeast(0))
@@ -504,6 +506,8 @@ private fun EditorScreen(
         LaunchedEffect(timelineScroll.value) {
             onTimelineOffset(timelineScroll.value.toLong())
             if (durationMs > 0L) {
+                // The canvas has a half-viewport leading gutter, so scroll offset
+                // maps directly to the time under the centered playhead.
                 val target = ((timelineScroll.value / density / 48f) * 1000f).toLong().coerceIn(0L, durationMs)
                 onSeek(target)
                 videoView.value?.seekTo(target.toInt())
@@ -520,8 +524,11 @@ private fun EditorScreen(
                     Text("Audio", color = Color(0xFFD6D8DA), fontSize = 9.sp, modifier = Modifier.height(29.dp), maxLines = 1)
                     Text("Text", color = Color(0xFFD6D8DA), fontSize = 9.sp, modifier = Modifier.height(29.dp), maxLines = 1)
                 }
-                Box(Modifier.weight(1f).fillMaxHeight()) {
+                BoxWithConstraints(Modifier.weight(1f).fillMaxHeight()) {
+                    val timelineViewportWidth = maxWidth
                     Row(Modifier.fillMaxSize().horizontalScroll(timelineScroll)) {
+                        // Leading and trailing gutters let the fixed playhead reach both ends.
+                        Spacer(Modifier.width(timelineViewportWidth / 2))
                         Column(Modifier.width(timelineContentWidth)) {
                             val tickCount = (timelineContentWidth.value / 120f).toInt() + 1
                             Row(Modifier.fillMaxWidth().height(19.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -582,6 +589,7 @@ private fun EditorScreen(
                                 }
                             }
                         }
+                        Spacer(Modifier.width(timelineViewportWidth / 2))
                     }
                     // Stationary playhead: moving the timeline underneath it scrubs the preview.
                     Box(Modifier.align(Alignment.TopCenter).width(2.dp).fillMaxHeight().background(Color.White.copy(alpha = .95f)))
