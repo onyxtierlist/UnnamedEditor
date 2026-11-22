@@ -12,17 +12,19 @@ An independent Android-first video editor prototype with a mobile editing worksp
 - Set trim start/end points, reset trim, and loop preview playback within the selected range
 - Undo/redo supported editor-state changes (up to 50 history steps)
 - Preview speed control
-- Effects selection UI and node workspace (saved as project state; not rendered)
+- Adjustable GPU effect stack with brightness, contrast, HSL controls, blur, RGB channel scaling, zoom, and rotation; effect values are saved and rendered during export
 - Export the imported source video as MP4 (H.264 video, AAC audio)
 - Choose 720p, 1080p, 1440p, or 4K output size and Standard/High/Maximum bitrate preset
 - Save completed exports to Gallery → Movies/UnnamedEditor on Android 10+
 
 ## Important limitations
 This is an early usable prototype, not a full professional multitrack editor.
-- Export currently processes only the imported source video with the selected trim range.
-- Additional timeline tracks, audio layers, text, stickers, overlays, effects, filters, and node graphs are not composited into the exported file.
+- Export currently processes only the imported source video with the selected trim range and global effect stack.
+- Additional timeline tracks, audio layers, text, stickers, overlays, and node graphs are not composited into the exported file. The current effect stack applies to the whole trimmed source, not separate effect clips with independent timeline ranges.
 - Timeline clip blocks are visual entries; they do not yet have independent time positions or durations.
 - Duplicate creates a second timeline entry; it does not cut the source media at the playhead.
+- Effects are not yet rendered live in the preview; their final appearance is visible after export.
+- Effect keyframes, per-effect timeline duration, masks, motion tracking, AI/body effects, and CapCut's changing cloud effect catalog are not implemented.
 - Preview speed is a playback control and is not baked into export.
 - Frame rate follows the source video.
 - Project data is stored locally on the device; there is no cloud sync.
