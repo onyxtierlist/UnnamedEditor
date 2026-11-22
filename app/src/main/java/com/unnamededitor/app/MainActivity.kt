@@ -258,7 +258,18 @@ private fun UnnamedEditor() {
                         onExport = { page = "Export" },
                         previewX = previewX, previewY = previewY, timelineOffsetMs = timelineOffsetMs, trimStartMs = trimStartMs, trimEndMs = trimEndMs, editorCategory = editorCategory, onCategory = { editorCategory = it },
                         onPreviewX = { previewX = it }, onPreviewY = { previewY = it }, onTimelineOffset = { timelineOffsetMs = it },
-                        onTrimStart = { pushUndo(); trimStartMs = it.coerceAtLeast(0L); notice = "Trim start updated" }, onTrimEnd = { pushUndo(); trimEndMs = it.coerceAtLeast(trimStartMs); notice = "Trim end updated" }, onResetTrim = { pushUndo(); trimStartMs = 0L; trimEndMs = 0L; notice = "Trim reset" }
+                        onTrimStart = {
+                            pushUndo()
+                            trimStartMs = it.coerceAtLeast(0L)
+                            if (trimEndMs > 0L && trimEndMs <= trimStartMs) trimEndMs = 0L
+                            notice = "Trim start updated"
+                        },
+                        onTrimEnd = {
+                            pushUndo()
+                            trimEndMs = it.coerceAtLeast(trimStartMs + 1L).let { end -> if (durationMs > 0L) end.coerceAtMost(durationMs) else end }
+                            notice = "Trim end updated"
+                        },
+                        onResetTrim = { pushUndo(); trimStartMs = 0L; trimEndMs = 0L; notice = "Trim reset" }
                     )
                     "Effects" -> EffectsScreen(activeEffects, onToggle = {
                         pushUndo()
@@ -438,10 +449,20 @@ private fun EditorScreen(
             if (playing) view.start() else view.pause()
         }
     }
-    LaunchedEffect(playing, videoUri) {
+    LaunchedEffect(playing, videoUri, trimStartMs, trimEndMs) {
         while (playing && videoUri != null) {
-            videoView.value?.let { onPosition(it.currentPosition.toLong()) }
-            delay(200)
+            videoView.value?.let { view ->
+                val position = view.currentPosition.toLong()
+                val start = trimStartMs.coerceAtLeast(0L)
+                val end = trimEndMs
+                if (position < start || (end > start && position >= end)) {
+                    view.seekTo(start.toInt())
+                    onPosition(start)
+                } else {
+                    onPosition(position)
+                }
+            }
+            delay(120)
         }
     }
     val categories = listOf("Edit", "Audio", "Text", "Stickers", "Overlay", "Effects", "Filters", "Adjust")
