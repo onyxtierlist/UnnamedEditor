@@ -5,9 +5,11 @@ An independent Android-first video editor prototype with a mobile editing worksp
 ## Current working features
 - Create a project and import a video using Android's document picker
 - Preview imported video and play/pause
+- Horizontally scrollable timeline with a fixed center playhead, synchronized ruler/tracks, and preview scrubbing
+- Imported video clip width reflects the source duration; select clips directly on the timeline
 - Timeline track layout for video, audio, and text layer placeholders
 - Select and delete timeline entries; duplicate a selected entry
-- Set trim start/end points and reset trim
+- Set trim start/end points, reset trim, and loop preview playback within the selected range
 - Undo/redo supported editor-state changes (up to 50 history steps)
 - Preview speed control
 - Effects selection UI and node workspace (saved as project state; not rendered)
@@ -32,4 +34,4 @@ Open the project in Android Studio and run the app configuration, or use the Git
 
 - Package: `com.unnamededitor.app`
 - Minimum Android: 8.0 (API 26)
-- Version: 0.2.0
+- Version: 0.2.1
