@@ -76,7 +76,8 @@ private data class EditorSnapshot(
     val previewY: Float,
     val videoUri: Uri?,
     val videoName: String,
-    val playheadMs: Long
+    val playheadMs: Long,
+    val selectedClip: Int
 )
 private data class NodeItem(val id: Int, val title: String, val detail: String)
 
@@ -151,7 +152,7 @@ private fun UnnamedEditor() {
     var exporting by remember { mutableStateOf(false) }
     var editorCategory by remember { mutableStateOf("Edit") }
     val makeSnapshot = {
-        EditorSnapshot(clips.toList(), activeEffects.toSet(), speed, trimStartMs, trimEndMs, previewX, previewY, videoUri, videoName, playheadMs)
+        EditorSnapshot(clips.toList(), activeEffects.toSet(), speed, trimStartMs, trimEndMs, previewX, previewY, videoUri, videoName, playheadMs, selectedClip)
     }
     fun pushUndo() { undoHistory = (undoHistory + makeSnapshot()).takeLast(50); redoHistory = emptyList() }
     fun restoreSnapshot(snapshot: EditorSnapshot) {
@@ -159,6 +160,7 @@ private fun UnnamedEditor() {
         trimStartMs = snapshot.trimStartMs; trimEndMs = snapshot.trimEndMs
         previewX = snapshot.previewX; previewY = snapshot.previewY
         videoUri = snapshot.videoUri; videoName = snapshot.videoName; playheadMs = snapshot.playheadMs
+        selectedClip = snapshot.selectedClip
         playing = false
     }
     fun undoEdit() {
