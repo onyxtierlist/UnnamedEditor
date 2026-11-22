@@ -466,6 +466,13 @@ private fun EditorScreen(
             if (playing) view.start() else view.pause()
         }
     }
+    // When undo restores a removed/replaced source, restore its saved preview position too.
+    LaunchedEffect(videoUri) {
+        if (videoUri != null) {
+            delay(350)
+            videoView.value?.seekTo(playheadMs.toInt().coerceAtLeast(0))
+        }
+    }
     LaunchedEffect(playing, videoUri, trimStartMs, trimEndMs) {
         while (playing && videoUri != null) {
             videoView.value?.let { view ->
