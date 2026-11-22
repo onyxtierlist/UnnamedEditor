@@ -18,6 +18,8 @@ import androidx.media3.effect.Brightness
 import androidx.media3.effect.Contrast
 import androidx.media3.effect.GaussianBlur
 import androidx.media3.effect.HslAdjustment
+import androidx.media3.effect.RgbAdjustment
+import androidx.media3.effect.ScaleAndRotateTransformation
 import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.Transformer
@@ -36,7 +38,7 @@ object MediaExportEngine {
         endMs: Long?,
         resolution: String,
         quality: String,
-        activeEffects: Set<String>,
+        activeEffects: Map<String, Float>,
         onProgress: (Int) -> Unit,
         onComplete: (String) -> Unit,
         onError: (String) -> Unit
@@ -60,12 +62,45 @@ object MediaExportEngine {
             .setRequestedVideoEncoderSettings(videoSettings)
             .build()
         val videoEffects = buildList {
-            if ("Color Grade" in activeEffects) {
-                add(HslAdjustment.Builder().adjustSaturation(18f).adjustLightness(2f).build())
+            val brightness = activeEffects["Brightness"] ?: 0f
+            if (kotlin.math.abs(brightness) > 0.001f) add(Brightness(brightness.coerceIn(-1f, 1f)))
+
+            val contrast = activeEffects["Contrast"] ?: 0f
+            if (kotlin.math.abs(contrast) > 0.001f) add(Contrast(contrast.coerceIn(-1f, 1f)))
+
+            val saturation = activeEffects["Saturation"] ?: 0f
+            val hue = activeEffects["Hue"] ?: 0f
+            val lightness = activeEffects["Lightness"] ?: 0f
+            if (kotlin.math.abs(saturation) > 0.001f || kotlin.math.abs(hue) > 0.001f || kotlin.math.abs(lightness) > 0.001f) {
+                add(HslAdjustment.Builder()
+                    .adjustHue(hue.coerceIn(-180f, 180f))
+                    .adjustSaturation(saturation.coerceIn(-100f, 100f))
+                    .adjustLightness(lightness.coerceIn(-100f, 100f))
+                    .build())
             }
-            if ("Contrast" in activeEffects) add(Contrast(0.18f))
-            if ("Gaussian Blur" in activeEffects) add(GaussianBlur(3f))
-            if ("Brightness" in activeEffects) add(Brightness(0.08f))
+
+            val blur = activeEffects["Gaussian Blur"] ?: 0f
+            if (blur > 0.05f) add(GaussianBlur(blur.coerceIn(0.1f, 18f)))
+
+            val red = activeEffects["Red Channel"] ?: 1f
+            val green = activeEffects["Green Channel"] ?: 1f
+            val blue = activeEffects["Blue Channel"] ?: 1f
+            if (kotlin.math.abs(red - 1f) > 0.001f || kotlin.math.abs(green - 1f) > 0.001f || kotlin.math.abs(blue - 1f) > 0.001f) {
+                add(RgbAdjustment.Builder()
+                    .setRedScale(red.coerceIn(0f, 2f))
+                    .setGreenScale(green.coerceIn(0f, 2f))
+                    .setBlueScale(blue.coerceIn(0f, 2f))
+                    .build())
+            }
+
+            val zoom = activeEffects["Zoom"] ?: 1f
+            val rotation = activeEffects["Rotate"] ?: 0f
+            if (kotlin.math.abs(zoom - 1f) > 0.001f || kotlin.math.abs(rotation) > 0.001f) {
+                add(ScaleAndRotateTransformation.Builder()
+                    .setScale(zoom.coerceIn(0.5f, 2f), zoom.coerceIn(0.5f, 2f))
+                    .setRotationDegrees(rotation.coerceIn(-180f, 180f))
+                    .build())
+            }
             add(Presentation.createForHeight(outputShortSide))
         }
         val effects = Effects(emptyList(), videoEffects)
