@@ -28,7 +28,7 @@ import java.io.File
  * The output is an H.264 MP4 written into the app's Movies folder.
  */
 object MediaExportEngine {
-    @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+    @OptIn(androidx.media3.common.util.UnstableApi::class)
     fun export(
         context: Context,
         source: android.net.Uri,
