@@ -219,13 +219,16 @@ private fun UnnamedEditor() {
                         canUndo = undoHistory.isNotEmpty(), canRedo = redoHistory.isNotEmpty(),
                         onUndo = { undoEdit() }, onRedo = { redoEdit() },
                         onSplit = {
-                            pushUndo()
                             val chosen = clips.firstOrNull { it.id == selectedClip }
-                            if (chosen != null) {
-                                clips = clips.flatMap { if (it.id == selectedClip) listOf(it.copy(title = it.title + " A"), it.copy(id = nextId++, title = it.title + " B")) else listOf(it) }
-                                selectedClip = clips.first { it.title.endsWith(" A") }.id
-                                notice = "Selected clip duplicated"
-                            } else notice = "Select a clip to split"
+                            if (chosen == null) {
+                                notice = "Select a clip to duplicate"
+                            } else {
+                                pushUndo()
+                                val duplicate = chosen.copy(id = nextId++, title = chosen.title + " copy")
+                                clips = clips.flatMap { if (it.id == selectedClip) listOf(it, duplicate) else listOf(it) }
+                                selectedClip = duplicate.id
+                                notice = "Clip duplicated"
+                            }
                         },
                         onDelete = {
                             val selected = clips.firstOrNull { it.id == selectedClip }
