@@ -549,14 +549,20 @@ private fun EditorScreen(
                                             Text("＋  Add video", color = Color(0xFFB7F36B), fontSize = 10.sp)
                                         }
                                     } else videoClips.forEach { clip ->
+                                        val clipWidth = if (clip.kind == "VIDEO" && durationMs > 0L) {
+                                            (durationMs / 1000f * 48f).dp.coerceAtLeast(72.dp)
+                                        } else 145.dp
                                         Box(
-                                            Modifier.width(145.dp).fillMaxHeight().clip(RoundedCornerShape(4.dp))
+                                            Modifier.width(clipWidth).fillMaxHeight().clip(RoundedCornerShape(4.dp))
                                                 .background(if (selectedClip == clip.id) Color(0xFF607B3D) else Color(0xFF384A2D))
                                                 .then(if (selectedClip == clip.id) Modifier.border(1.dp, Color(0xFFB7F36B), RoundedCornerShape(4.dp)) else Modifier)
                                                 .clickable { onSelectClip(clip.id) }.padding(horizontal = 7.dp),
                                             contentAlignment = Alignment.CenterStart
                                         ) {
-                                            Text(clip.title, color = Color.White, fontSize = 9.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                            val clipLabel = if (clip.kind == "VIDEO" && durationMs > 0L) {
+                                                clip.title + "  ·  " + formatTime(durationMs)
+                                            } else clip.title
+                                            Text(clipLabel, color = Color.White, fontSize = 9.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                         }
                                     }
                                     Surface(onClick = onImport, color = Color(0xFF292D30), shape = RoundedCornerShape(4.dp), modifier = Modifier.width(34.dp).height(34.dp)) {
