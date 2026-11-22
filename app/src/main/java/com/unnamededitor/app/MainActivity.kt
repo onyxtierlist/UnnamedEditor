@@ -254,7 +254,10 @@ private fun UnnamedEditor() {
                             } else {
                                 pushUndo()
                                 clips = clips.filterNot { it.id == selectedClip }
-                                if (selected.kind == "VIDEO") {
+                                // Duplicated video entries share the imported source.
+                                // Keep the preview while at least one VIDEO entry remains.
+                                val hasRemainingVideo = clips.any { it.kind == "VIDEO" }
+                                if (selected.kind == "VIDEO" && !hasRemainingVideo) {
                                     videoUri = null
                                     videoName = "No media imported"
                                     playing = false
@@ -582,6 +585,16 @@ private fun EditorScreen(
                 val target = ((timelineScroll.value / density / 48f) * 1000f).toLong().coerceIn(0L, durationMs)
                 onSeek(target)
                 videoView.value?.seekTo(target.toInt())
+            }
+        }
+        // Advance the timeline underneath the fixed playhead during playback.
+        LaunchedEffect(playing, playheadMs, durationMs) {
+            if (playing && durationMs > 0L) {
+                val targetOffset = (playheadMs.coerceIn(0L, durationMs) / 1000f * 48f * density)
+                    .toInt().coerceIn(0, timelineScroll.maxValue)
+                if (kotlin.math.abs(timelineScroll.value - targetOffset) > 2) {
+                    timelineScroll.scrollTo(targetOffset)
+                }
             }
         }
         Column(Modifier.fillMaxWidth().background(Color(0xFF111315)).padding(top = 7.dp, bottom = 5.dp)) {
