@@ -14,6 +14,10 @@ import androidx.media3.transformer.VideoEncoderSettings
 import androidx.media3.transformer.EditedMediaItem
 import androidx.media3.transformer.Effects
 import androidx.media3.effect.Presentation
+import androidx.media3.effect.Brightness
+import androidx.media3.effect.Contrast
+import androidx.media3.effect.GaussianBlur
+import androidx.media3.effect.HslAdjustment
 import androidx.media3.transformer.ExportException
 import androidx.media3.transformer.ExportResult
 import androidx.media3.transformer.Transformer
@@ -24,6 +28,7 @@ import java.io.File
  * The output is an H.264 MP4 written into the app's Movies folder.
  */
 object MediaExportEngine {
+    @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
     fun export(
         context: Context,
         source: android.net.Uri,
@@ -31,6 +36,7 @@ object MediaExportEngine {
         endMs: Long?,
         resolution: String,
         quality: String,
+        activeEffects: Set<String>,
         onProgress: (Int) -> Unit,
         onComplete: (String) -> Unit,
         onError: (String) -> Unit
@@ -53,7 +59,16 @@ object MediaExportEngine {
         val encoderFactory = DefaultEncoderFactory.Builder(context)
             .setRequestedVideoEncoderSettings(videoSettings)
             .build()
-        val effects = Effects(emptyList(), listOf(Presentation.createForHeight(outputShortSide)))
+        val videoEffects = buildList {
+            if ("Color Grade" in activeEffects) {
+                add(HslAdjustment.Builder().adjustSaturation(18f).adjustLightness(2f).build())
+            }
+            if ("Contrast" in activeEffects) add(Contrast(0.18f))
+            if ("Gaussian Blur" in activeEffects) add(GaussianBlur(3f))
+            if ("Brightness" in activeEffects) add(Brightness(0.08f))
+            add(Presentation.createForHeight(outputShortSide))
+        }
+        val effects = Effects(emptyList(), videoEffects)
         val edited = EditedMediaItem.Builder(item).setEffects(effects).build()
         val handler = Handler(Looper.getMainLooper())
         lateinit var transformer: Transformer
