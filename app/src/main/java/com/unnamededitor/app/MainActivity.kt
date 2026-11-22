@@ -66,7 +66,18 @@ private val gradient = Brush.linearGradient(listOf(Color(0xFF343D2A), Color(0xFF
 private val glassGradient = Brush.linearGradient(listOf(Color(0xFF252A22), Color(0xFF1B2019), Color(0xFF171B15)))
 
 private data class ClipItem(val id: Int, val title: String, val kind: String, val tint: Color)
-private data class EditorSnapshot(val clips: List<ClipItem>, val effects: Set<String>, val speed: String, val trimStartMs: Long, val trimEndMs: Long, val previewX: Float, val previewY: Float)
+private data class EditorSnapshot(
+    val clips: List<ClipItem>,
+    val effects: Set<String>,
+    val speed: String,
+    val trimStartMs: Long,
+    val trimEndMs: Long,
+    val previewX: Float,
+    val previewY: Float,
+    val videoUri: Uri?,
+    val videoName: String,
+    val playheadMs: Long
+)
 private data class NodeItem(val id: Int, val title: String, val detail: String)
 
 class MainActivity : ComponentActivity() {
@@ -139,12 +150,16 @@ private fun UnnamedEditor() {
     var exportMessage by remember { mutableStateOf("Ready to export") }
     var exporting by remember { mutableStateOf(false) }
     var editorCategory by remember { mutableStateOf("Edit") }
-    val makeSnapshot = { EditorSnapshot(clips.toList(), activeEffects.toSet(), speed, trimStartMs, trimEndMs, previewX, previewY) }
+    val makeSnapshot = {
+        EditorSnapshot(clips.toList(), activeEffects.toSet(), speed, trimStartMs, trimEndMs, previewX, previewY, videoUri, videoName, playheadMs)
+    }
     fun pushUndo() { undoHistory = (undoHistory + makeSnapshot()).takeLast(50); redoHistory = emptyList() }
     fun restoreSnapshot(snapshot: EditorSnapshot) {
         clips = snapshot.clips; activeEffects = snapshot.effects; speed = snapshot.speed
         trimStartMs = snapshot.trimStartMs; trimEndMs = snapshot.trimEndMs
         previewX = snapshot.previewX; previewY = snapshot.previewY
+        videoUri = snapshot.videoUri; videoName = snapshot.videoName; playheadMs = snapshot.playheadMs
+        playing = false
     }
     fun undoEdit() {
         val previous = undoHistory.lastOrNull() ?: return
