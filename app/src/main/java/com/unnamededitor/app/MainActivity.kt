@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.input.pointer.pointerInput
 import kotlinx.coroutines.delay
+import androidx.compose.runtime.withFrameNanos
 import org.json.JSONArray
 import org.json.JSONObject
 import androidx.compose.ui.viewinterop.AndroidView
@@ -306,7 +307,7 @@ private fun UnnamedEditor() {
                             if (videoUri == null) { exportMessage = "Import a video first"; showExportInfo = true }
                             else {
                                 exporting = true; exportProgress = 0; exportMessage = "Preparing video…"
-                                MediaExportEngine.export(context, videoUri!!, trimStartMs, trimEndMs.takeIf { it > 0L }, resolution, quality,
+                                MediaExportEngine.export(context, videoUri!!, trimStartMs, trimEndMs.takeIf { it > 0L }, resolution, quality, activeEffects,
                                     onProgress = { exportProgress = it; exportMessage = "Rendering… $it%" },
                                     onComplete = { location -> exporting = false; exportProgress = 100; exportMessage = "Export complete. Saved to " + location; showExportInfo = true },
                                     onError = { error -> exporting = false; exportMessage = error; showExportInfo = true })
@@ -476,20 +477,37 @@ private fun EditorScreen(
             videoView.value?.seekTo(playheadMs.toInt().coerceAtLeast(0))
         }
     }
-    LaunchedEffect(playing, videoUri, trimStartMs, trimEndMs) {
-        while (playing && videoUri != null) {
-            videoView.value?.let { view ->
+    // One frame-paced playback ticker drives both the UI position and timeline follow.
+    // Keep this effect independent of playheadMs so position updates do not restart it.
+    LaunchedEffect(playing, videoUri, trimStartMs, trimEndMs, durationMs) {
+        if (playing && videoUri != null) {
+            var lastUiUpdateNanos = 0L
+            while (true) {
+                val frameTimeNanos = withFrameNanos { it }
+                val view = videoView.value ?: continue
                 val position = view.currentPosition.toLong()
                 val start = trimStartMs.coerceAtLeast(0L)
                 val end = trimEndMs
-                if (position < start || (end > start && position >= end)) {
+                val effectivePosition = if (position < start || (end > start && position >= end)) {
                     view.seekTo(start.toInt())
-                    onPosition(start)
-                } else {
-                    onPosition(position)
+                    start
+                } else position
+
+                // 30 Hz UI updates are smooth without forcing a full recomposition at 60 Hz.
+                if (frameTimeNanos - lastUiUpdateNanos >= 33_000_000L) {
+                    onPosition(effectivePosition)
+                    lastUiUpdateNanos = frameTimeNanos
+                }
+
+                // Follow the actual player clock at display-frame cadence.
+                if (durationMs > 0L) {
+                    val targetOffset = (effectivePosition.coerceIn(0L, durationMs) / 1000f * 48f * density)
+                        .toInt().coerceIn(0, timelineScroll.maxValue)
+                    if (kotlin.math.abs(timelineScroll.value - targetOffset) > 1) {
+                        timelineScroll.scrollTo(targetOffset)
+                    }
                 }
             }
-            delay(120)
         }
     }
     val categories = listOf("Edit", "Audio", "Text", "Stickers", "Overlay", "Effects", "Filters", "Adjust")
@@ -588,16 +606,6 @@ private fun EditorScreen(
                 if (!playing) {
                     onSeek(target)
                     videoView.value?.seekTo(target.toInt())
-                }
-            }
-        }
-        // Advance the timeline underneath the fixed playhead during playback.
-        LaunchedEffect(playing, playheadMs, durationMs) {
-            if (playing && durationMs > 0L) {
-                val targetOffset = (playheadMs.coerceIn(0L, durationMs) / 1000f * 48f * density)
-                    .toInt().coerceIn(0, timelineScroll.maxValue)
-                if (kotlin.math.abs(timelineScroll.value - targetOffset) > 2) {
-                    timelineScroll.scrollTo(targetOffset)
                 }
             }
         }
@@ -751,7 +759,7 @@ private fun EditorTool(label: String, icon: androidx.compose.ui.graphics.vector.
 
 @Composable
 private fun EffectsScreen(active: Set<String>, onToggle: (String) -> Unit, onBack: () -> Unit) {
-    val effects = listOf("Color Grade" to "Tone, contrast and saturation", "Curves" to "Fine control over tonal range", "Gaussian Blur" to "Soft focus and depth", "Motion Blur" to "Directional movement blur", "Glow" to "Bloom highlights", "Chromatic Aberration" to "RGB channel separation", "Vignette" to "Darken the frame edges", "Sharpen" to "Enhance fine detail")
+    val effects = listOf("Color Grade" to "Adjust color intensity and tone · rendered on export", "Contrast" to "Increase or soften tonal contrast · rendered on export", "Gaussian Blur" to "Apply a soft-focus blur · rendered on export", "Brightness" to "Lift or darken the image · rendered on export")
     Column(Modifier.fillMaxSize().padding(18.dp)) {
         PageHeader("Effects Lab", "LIVE EFFECT STACK", onBack)
         Text("Tap an effect to add or remove it from the active stack.", color = textDim, fontSize = 12.sp)
