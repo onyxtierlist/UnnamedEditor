@@ -360,7 +360,7 @@ private fun UnnamedEditor() {
             confirmButton = { TextButton(onClick = {
                 projectName = newName.ifBlank { "Untitled Project" }
                 clips = emptyList()
-                activeEffects = emptySet()
+                activeEffects = emptyMap()
                 videoUri = null
                 videoName = "No media imported"
                 selectedClip = -1
