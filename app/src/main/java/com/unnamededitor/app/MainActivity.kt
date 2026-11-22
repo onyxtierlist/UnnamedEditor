@@ -69,7 +69,7 @@ private val glassGradient = Brush.linearGradient(listOf(Color(0xFF252A22), Color
 private data class ClipItem(val id: Int, val title: String, val kind: String, val tint: Color)
 private data class EditorSnapshot(
     val clips: List<ClipItem>,
-    val effects: Set<String>,
+    val effects: Map<String, Float>,
     val speed: String,
     val trimStartMs: Long,
     val trimEndMs: Long,
@@ -102,14 +102,33 @@ private fun loadSavedClips(): List<ClipItem> = runCatching {
     val arr = JSONArray(appPrefs().getString("clips", "[]"))
     (0 until arr.length()).map { i -> arr.getJSONObject(i).let { ClipItem(it.getInt("id"), it.getString("title"), it.getString("kind"), Color(it.getLong("tint").toLong())) } }
 }.getOrElse { emptyList() }
-private fun loadSavedEffects(): Set<String> = runCatching {
-    val arr = JSONArray(appPrefs().getString("effects", "[]")); (0 until arr.length()).map { arr.getString(it) }.toSet()
-}.getOrElse { emptySet() }
-private fun saveEditorState(context: android.content.Context, project: String, uri: Uri?, video: String, clips: List<ClipItem>, effects: Set<String>, resolution: String, fps: String, quality: String) {
+private fun loadSavedEffects(): Map<String, Float> = runCatching {
+    val raw = appPrefs().getString("effects", "[]") ?: "[]"
+    if (raw.trimStart().startsWith("{")) {
+        val json = JSONObject(raw)
+        buildMap { json.keys().forEach { key -> put(key, json.optDouble(key, 0.0).toFloat()) } }
+    } else {
+        val legacy = JSONArray(raw)
+        buildMap {
+            for (i in 0 until legacy.length()) {
+                val name = legacy.optString(i)
+                val migrated = when (name) {
+                    "Color Grade" -> 18f
+                    "Contrast" -> 0.18f
+                    "Gaussian Blur" -> 3f
+                    "Brightness" -> 0.08f
+                    else -> 0f
+                }
+                put(name, migrated)
+            }
+        }
+    }
+}.getOrElse { emptyMap() }
+private fun saveEditorState(context: android.content.Context, project: String, uri: Uri?, video: String, clips: List<ClipItem>, effects: Map<String, Float>, resolution: String, fps: String, quality: String) {
     AppContextHolder.context = context.applicationContext
     val clipArray = JSONArray().apply { clips.forEach { put(JSONObject().put("id", it.id).put("title", it.title).put("kind", it.kind).put("tint", it.tint.value.toLong())) } }
-    val effectArray = JSONArray().apply { effects.forEach { put(it) } }
-    appPrefs().edit().putString("projectName", project).putString("videoUri", uri?.toString()).putString("videoName", video).putString("clips", clipArray.toString()).putString("effects", effectArray.toString()).putString("resolution", resolution).putString("frameRate", fps).putString("quality", quality).apply()
+    val effectObject = JSONObject().apply { effects.forEach { (name, value) -> put(name, value.toDouble()) } }
+    appPrefs().edit().putString("projectName", project).putString("videoUri", uri?.toString()).putString("videoName", video).putString("clips", clipArray.toString()).putString("effects", effectObject.toString()).putString("resolution", resolution).putString("frameRate", fps).putString("quality", quality).apply()
 }
 private object AppContextHolder { lateinit var context: android.content.Context }
 
@@ -153,11 +172,11 @@ private fun UnnamedEditor() {
     var exporting by remember { mutableStateOf(false) }
     var editorCategory by remember { mutableStateOf("Edit") }
     val makeSnapshot = {
-        EditorSnapshot(clips.toList(), activeEffects.toSet(), speed, trimStartMs, trimEndMs, previewX, previewY, videoUri, videoName, playheadMs, selectedClip)
+        EditorSnapshot(clips.toList(), activeEffects.toMap(), speed, trimStartMs, trimEndMs, previewX, previewY, videoUri, videoName, playheadMs, selectedClip)
     }
     fun pushUndo() { undoHistory = (undoHistory + makeSnapshot()).takeLast(50); redoHistory = emptyList() }
     fun restoreSnapshot(snapshot: EditorSnapshot) {
-        clips = snapshot.clips; activeEffects = snapshot.effects; speed = snapshot.speed
+        clips = snapshot.clips; activeEffects = snapshot.effects.toMap(); speed = snapshot.speed
         trimStartMs = snapshot.trimStartMs; trimEndMs = snapshot.trimEndMs
         previewX = snapshot.previewX; previewY = snapshot.previewY
         videoUri = snapshot.videoUri; videoName = snapshot.videoName; playheadMs = snapshot.playheadMs
@@ -292,11 +311,23 @@ private fun UnnamedEditor() {
                         },
                         onResetTrim = { pushUndo(); trimStartMs = 0L; trimEndMs = 0L; notice = "Trim reset" }
                     )
-                    "Effects" -> EffectsScreen(activeEffects, onToggle = {
-                        pushUndo()
-                        activeEffects = if (activeEffects.contains(it)) activeEffects - it else activeEffects + it
-                        notice = if (activeEffects.contains(it)) it + " enabled" else it + " removed"
-                    }, onBack = { page = "Editor" })
+                    "Effects" -> EffectsScreen(
+                        active = activeEffects,
+                        onAdd = { name, defaultValue ->
+                            if (name !in activeEffects) {
+                                pushUndo()
+                                activeEffects = activeEffects + (name to defaultValue)
+                                notice = "$name added to effect stack"
+                            }
+                        },
+                        onValue = { name, value -> activeEffects = activeEffects + (name to value) },
+                        onRemove = { name ->
+                            pushUndo()
+                            activeEffects = activeEffects - name
+                            notice = "$name removed"
+                        },
+                        onBack = { page = "Editor" }
+                    )
                     "Nodes" -> NodesScreen(nodes,
                         onAdd = { title -> nodes = nodes + NodeItem(nextId++, title, "Effect node"); notice = title + " node added" },
                         onRemove = { id -> nodes = nodes.filterNot { it.id == id }; notice = "Node removed" },
@@ -766,33 +797,118 @@ private fun EditorTool(label: String, icon: androidx.compose.ui.graphics.vector.
     }
 }
 
+private data class EffectDefinition(
+    val name: String,
+    val category: String,
+    val description: String,
+    val min: Float,
+    val max: Float,
+    val defaultValue: Float,
+    val unit: String = ""
+)
+
+private val effectCatalog = listOf(
+    EffectDefinition("Brightness", "Adjust", "Lift or lower overall exposure", -1f, 1f, 0f),
+    EffectDefinition("Contrast", "Adjust", "Control the separation between lights and shadows", -1f, 1f, 0f),
+    EffectDefinition("Saturation", "Color", "Make colors more vivid or muted", -100f, 100f, 0f),
+    EffectDefinition("Hue", "Color", "Rotate the overall color spectrum", -180f, 180f, 0f, "°"),
+    EffectDefinition("Lightness", "Color", "Raise or lower overall color lightness", -100f, 100f, 0f),
+    EffectDefinition("Gaussian Blur", "Blur", "Soften the image with a GPU blur", 0f, 18f, 4f),
+    EffectDefinition("Red Channel", "Color", "Tune red channel contribution", 0f, 2f, 1f, "×"),
+    EffectDefinition("Green Channel", "Color", "Tune green channel contribution", 0f, 2f, 1f, "×"),
+    EffectDefinition("Blue Channel", "Color", "Tune blue channel contribution", 0f, 2f, 1f, "×"),
+    EffectDefinition("Zoom", "Transform", "Scale the image into the frame", 0.5f, 2f, 1f, "×"),
+    EffectDefinition("Rotate", "Transform", "Rotate the image around its center", -180f, 180f, 0f, "°")
+)
+
 @Composable
-private fun EffectsScreen(active: Set<String>, onToggle: (String) -> Unit, onBack: () -> Unit) {
-    val effects = listOf("Color Grade" to "Adjust color intensity and tone · rendered on export", "Contrast" to "Increase or soften tonal contrast · rendered on export", "Gaussian Blur" to "Apply a soft-focus blur · rendered on export", "Brightness" to "Lift or darken the image · rendered on export")
-    Column(Modifier.fillMaxSize().padding(18.dp)) {
-        PageHeader("Effects Lab", "LIVE EFFECT STACK", onBack)
-        Text("Tap an effect to add or remove it from the active stack.", color = textDim, fontSize = 12.sp)
-        Spacer(Modifier.height(15.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("ACTIVE", color = cyan, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-            Text(active.size.toString() + " enabled", color = textDim, fontSize = 10.sp)
-        }
-        Spacer(Modifier.height(8.dp))
-        if (active.isEmpty()) Text("No effects applied yet.", color = textDim, fontSize = 11.sp, modifier = Modifier.padding(vertical = 8.dp))
-        else Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            active.forEach { AssistChip(onClick = { onToggle(it) }, label = { Text(it) }, leadingIcon = { Text("✕") })
+private fun EffectsScreen(
+    active: Map<String, Float>,
+    onAdd: (String, Float) -> Unit,
+    onValue: (String, Float) -> Unit,
+    onRemove: (String) -> Unit,
+    onBack: () -> Unit
+) {
+    var category by remember { mutableStateOf("All") }
+    val categories = listOf("All", "Adjust", "Color", "Blur", "Transform")
+    Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)) {
+        PageHeader("Effects & Adjustments", "GPU EFFECT STACK", onBack)
+        Text("Add effects, tune each one, and combine them. Your settings are saved with this project and rendered on export.", color = textDim, fontSize = 11.sp)
+        Spacer(Modifier.height(12.dp))
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+            categories.forEach { item ->
+                FilterChip(
+                    selected = category == item,
+                    onClick = { category = item },
+                    label = { Text(item) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = violet,
+                        selectedLabelColor = ink
+                    )
+                )
             }
         }
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(12.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("ACTIVE STACK", color = cyan, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            Text("${active.size} effects", color = textDim, fontSize = 10.sp)
+        }
+        Spacer(Modifier.height(7.dp))
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-            effects.forEach { (name, detail) ->
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(glassGradient).border(1.dp, line, RoundedCornerShape(16.dp)).clickable { onToggle(name) }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(42.dp).clip(RoundedCornerShape(12.dp)).background(surface2), contentAlignment = Alignment.Center) { Text("✧", color = violet, fontSize = 21.sp) }
-                    Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                        Text(name, color = textMain, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                        Text(detail, color = textDim, fontSize = 10.sp)
+            if (active.isEmpty()) {
+                Text("No effects added. Choose an effect below to build your stack.", color = textDim, fontSize = 11.sp, modifier = Modifier.padding(vertical = 8.dp))
+            }
+            active.forEach { (name, value) ->
+                val definition = effectCatalog.firstOrNull { it.name == name }
+                if (definition != null) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(15.dp),
+                        color = Color(0xFF20261D),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF536344))
+                    ) {
+                        Column(Modifier.padding(13.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(name, color = textMain, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                                    Text(definition.category.uppercase(), color = cyan, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                                }
+                                TextButton(onClick = { onRemove(name) }) { Text("Remove", color = Color(0xFFFF9B91), fontSize = 10.sp) }
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("Intensity", color = textDim, fontSize = 10.sp, modifier = Modifier.weight(1f))
+                                Text(String.format("%.2f", value) + definition.unit, color = textMain, fontSize = 10.sp)
+                            }
+                            Slider(
+                                value = value.coerceIn(definition.min, definition.max),
+                                onValueChange = { onValue(name, it) },
+                                valueRange = definition.min..definition.max
+                            )
+                            Text(definition.description, color = textDim, fontSize = 9.sp)
+                        }
                     }
-                    Text(if (active.contains(name)) "ON" else "＋", color = if (active.contains(name)) cyan else violet, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                }
+            }
+            Text("EFFECT LIBRARY", color = cyan, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 7.dp))
+            effectCatalog.filter { category == "All" || it.category == category }.forEach { definition ->
+                val isAdded = definition.name in active
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(13.dp))
+                        .background(glassGradient)
+                        .border(1.dp, line, RoundedCornerShape(13.dp))
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(definition.name, color = textMain, fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                        Text(definition.description, color = textDim, fontSize = 9.sp)
+                    }
+                    TextButton(
+                        enabled = !isAdded,
+                        onClick = { onAdd(definition.name, definition.defaultValue) }
+                    ) {
+                        Text(if (isAdded) "Added" else "＋ Add", color = if (isAdded) textDim else violet, fontSize = 10.sp)
+                    }
                 }
             }
         }
